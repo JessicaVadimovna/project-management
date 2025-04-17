@@ -57,11 +57,11 @@ const BoardPage = () => {
               <h2>{status}</h2>
               {tasks[status as keyof Tasks].map((task, index) => (
                 <Draggable draggableId={task.id} index={index} key={task.id}>
-                  {provided => (
+                  {draggableProvided => (
                     <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
+                      ref={draggableProvided.innerRef}
+                      {...draggableProvided.draggableProps}
+                      {...draggableProvided.dragHandleProps}
                     >
                       {task.title}
                     </div>
