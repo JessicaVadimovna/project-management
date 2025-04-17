@@ -1,21 +1,29 @@
 import { useEffect } from 'react';
 import { Modal, Form, Input, Select, Button } from 'antd';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { Task } from '../types/task';
+import { addTask, updateTask } from '../store/tasksSlice';
+import { closeModal } from '../store/modalSlice';
+import { useNavigate } from 'react-router-dom';
 
 interface TaskModalProps {
   visible: boolean;
-  onCancel: () => void;
-  onOk?: (values: Omit<Task, 'id'>) => void;
-  initialValues?: Partial<Omit<Task, 'id'>>;
+  taskId: string | null;
+  initialValues: Partial<Omit<Task, 'id'>> | null;
+  redirectToBoard: string | null;
 }
 
 const TaskModal = ({
   visible,
-  onCancel,
-  onOk,
+  taskId,
   initialValues,
+  redirectToBoard,
 }: TaskModalProps) => {
   const [form] = Form.useForm<Omit<Task, 'id'>>();
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const boards = useAppSelector(state => state.boards.boards);
+  const users = useAppSelector(state => state.users.users);
 
   useEffect(() => {
     if (visible) {
@@ -25,9 +33,21 @@ const TaskModal = ({
   }, [visible, initialValues, form]);
 
   const onFinish = (values: Omit<Task, 'id'>) => {
+    const task: Task = {
+      ...values,
+      id: taskId || `${Date.now()}`,
+    };
+    if (taskId) {
+      dispatch(updateTask(task));
+    } else {
+      dispatch(addTask(task));
+    }
     localStorage.removeItem('taskDraft');
-    onOk?.(values);
-    onCancel();
+    dispatch(closeModal());
+    if (redirectToBoard) {
+      navigate(`/board/${redirectToBoard}`);
+    }
+    form.resetFields();
   };
 
   const onValuesChange = (
@@ -37,11 +57,17 @@ const TaskModal = ({
     localStorage.setItem('taskDraft', JSON.stringify(allValues));
   };
 
+  const handleCancel = () => {
+    dispatch(closeModal());
+    localStorage.removeItem('taskDraft');
+    form.resetFields();
+  };
+
   return (
     <Modal
-      title="Создать задачу"
+      title={taskId ? 'Редактировать задачу' : 'Создать задачу'}
       open={visible}
-      onCancel={onCancel}
+      onCancel={handleCancel}
       footer={null}
     >
       <Form
@@ -90,9 +116,28 @@ const TaskModal = ({
         <Form.Item
           name="assignee"
           label="Исполнитель"
-          rules={[{ required: true, message: 'Введите исполнителя' }]}
+          rules={[{ required: true, message: 'Выберите исполнителя' }]}
         >
-          <Input />
+          <Select>
+            {users.map(user => (
+              <Select.Option key={user.id} value={user.id}>
+                {user.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
+        <Form.Item
+          name="boardId"
+          label="Доска"
+          rules={[{ required: true, message: 'Выберите доску' }]}
+        >
+          <Select>
+            {boards.map(board => (
+              <Select.Option key={board.id} value={board.id}>
+                {board.title}
+              </Select.Option>
+            ))}
+          </Select>
         </Form.Item>
         <Form.Item>
           <Button type="primary" htmlType="submit">

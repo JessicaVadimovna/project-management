@@ -1,15 +1,47 @@
 import { useState } from 'react';
-import { Button, Table } from 'antd';
-import TaskModal from '../components/TaskModal';
+import { Button, Table, Select, Input } from 'antd';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { openModal } from '../store/modalSlice';
 import { Task } from '../types/task';
+import { useNavigate } from 'react-router-dom';
+
+const { Option } = Select;
+const { Search } = Input;
 
 const IssuesPage = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const tasks = useAppSelector(state => state.tasks.tasks);
+  const boards = useAppSelector(state => state.boards.boards);
+  const users = useAppSelector(state => state.users.users);
 
-  const handleTaskSave = (values: Omit<Task, 'id'>) => {
-    setTasks([...tasks, { ...values, id: `${tasks.length + 1}` }]);
-    setModalVisible(false);
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(
+    undefined
+  );
+  const [boardFilter, setBoardFilter] = useState<string | undefined>(undefined);
+  const [searchText, setSearchText] = useState('');
+
+  const filteredTasks = tasks.filter(task => {
+    const matchesStatus = statusFilter ? task.status === statusFilter : true;
+    const matchesBoard = boardFilter ? task.boardId === boardFilter : true;
+    const matchesSearch =
+      task.title.toLowerCase().includes(searchText.toLowerCase()) ||
+      users
+        .find(user => user.id === task.assignee)
+        ?.name.toLowerCase()
+        .includes(searchText.toLowerCase()) ||
+      false;
+    return matchesStatus && matchesBoard && matchesSearch;
+  });
+
+  const handleRowClick = (task: Task) => {
+    dispatch(
+      openModal({
+        taskId: task.id,
+        initialValues: task,
+        redirectToBoard: task.boardId,
+      })
+    );
   };
 
   const columns = [
@@ -37,19 +69,65 @@ const IssuesPage = () => {
       title: 'Исполнитель',
       dataIndex: 'assignee',
       key: 'assignee',
+      render: (assigneeId: string) =>
+        users.find(user => user.id === assigneeId)?.name || 'Не назначен',
+    },
+    {
+      title: 'Доска',
+      dataIndex: 'boardId',
+      key: 'boardId',
+      render: (boardId: string) =>
+        boards.find(board => board.id === boardId)?.title || 'Без доски',
     },
   ];
 
   return (
     <div>
-      <Button type="primary" onClick={() => setModalVisible(true)}>
-        Создать задачу
-      </Button>
-      <Table dataSource={tasks} columns={columns} rowKey="id" />
-      <TaskModal
-        visible={modalVisible}
-        onCancel={() => setModalVisible(false)}
-        onOk={handleTaskSave}
+      <div
+        style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap' }}
+      >
+        <Button
+          type="primary"
+          onClick={() => dispatch(openModal({ initialValues: {} }))}
+        >
+          Создать задачу
+        </Button>
+        <Select
+          placeholder="Фильтр по статусу"
+          style={{ width: 200 }}
+          allowClear
+          onChange={value => setStatusFilter(value)}
+        >
+          <Option value="todo">К выполнению</Option>
+          <Option value="inprogress">В процессе</Option>
+          <Option value="done">Завершено</Option>
+        </Select>
+        <Select
+          placeholder="Фильтр по доске"
+          style={{ width: 200 }}
+          allowClear
+          onChange={value => setBoardFilter(value)}
+        >
+          {boards.map(board => (
+            <Option key={board.id} value={board.id}>
+              {board.title}
+            </Option>
+          ))}
+        </Select>
+        <Search
+          placeholder="Поиск по названию или исполнителю"
+          onSearch={value => setSearchText(value)}
+          style={{ width: 300 }}
+        />
+      </div>
+      <Table
+        dataSource={filteredTasks}
+        columns={columns}
+        rowKey="id"
+        onRow={record => ({
+          onClick: () => handleRowClick(record),
+          style: { cursor: 'pointer' },
+        })}
       />
     </div>
   );
