@@ -1,16 +1,22 @@
-import { Modal, Form, Input, Select } from 'antd';
 import { useEffect } from 'react';
+import { Modal, Form, Input, Select, Button } from 'antd';
 
-const { Option } = Select;
+interface Task {
+    title: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    status: 'todo' | 'inprogress' | 'done';
+    assignee: string;
+}
 
 interface TaskModalProps {
     visible: boolean;
     onCancel: () => void;
-    initialValues?: any;
+    initialValues?: Partial<Task>;
 }
 
 const TaskModal = ({ visible, onCancel, initialValues }: TaskModalProps) => {
-    const [form] = Form.useForm();
+    const [form] = Form.useForm<Task>();
 
     useEffect(() => {
         if (visible) {
@@ -19,44 +25,77 @@ const TaskModal = ({ visible, onCancel, initialValues }: TaskModalProps) => {
         }
     }, [visible, initialValues, form]);
 
-    const onFinish = (values: any) => {
+    const onFinish = (values: Task) => {
         console.log('Сохранено:', values);
         localStorage.removeItem('taskDraft');
         onCancel();
     };
 
-    const onValuesChange = (_: any, allValues: any) => {
+    const onValuesChange = (_: Partial<Task>, allValues: Task) => {
         localStorage.setItem('taskDraft', JSON.stringify(allValues));
     };
 
     return (
-        <Modal visible={visible} onCancel={onCancel} onOk={() => form.submit()} title="Задача">
-            <Form form={form} onFinish={onFinish} onValuesChange={onValuesChange}>
-                <Form.Item name="title" label="Название" rules={[{ required: true }]}>
+        <Modal
+            title="Создать задачу"
+            open={visible}
+            onCancel={onCancel}
+            footer={null}
+        >
+            <Form
+                form={form}
+                layout="vertical"
+                onFinish={onFinish}
+                onValuesChange={onValuesChange}
+                initialValues={initialValues}
+            >
+                <Form.Item
+                    name="title"
+                    label="Название"
+                    rules={[{ required: true, message: 'Введите название' }]}
+                >
                     <Input />
                 </Form.Item>
-                <Form.Item name="description" label="Описание">
+                <Form.Item
+                    name="description"
+                    label="Описание"
+                    rules={[{ required: true, message: 'Введите описание' }]}
+                >
                     <Input.TextArea />
                 </Form.Item>
-                <Form.Item name="priority" label="Приоритет">
+                <Form.Item
+                    name="priority"
+                    label="Приоритет"
+                    rules={[{ required: true, message: 'Выберите приоритет' }]}
+                >
                     <Select>
-                        <Option value="low">Низкий</Option>
-                        <Option value="medium">Средний</Option>
-                        <Option value="high">Высокий</Option>
+                        <Select.Option value="low">Низкий</Select.Option>
+                        <Select.Option value="medium">Средний</Select.Option>
+                        <Select.Option value="high">Высокий</Select.Option>
                     </Select>
                 </Form.Item>
-                <Form.Item name="status" label="Статус">
+                <Form.Item
+                    name="status"
+                    label="Статус"
+                    rules={[{ required: true, message: 'Выберите статус' }]}
+                >
                     <Select>
-                        <Option value="todo">К выполнению</Option>
-                        <Option value="inprogress">В работе</Option>
-                        <Option value="done">Завершено</Option>
+                        <Select.Option value="todo">К выполнению</Select.Option>
+                        <Select.Option value="inprogress">В процессе</Select.Option>
+                        <Select.Option value="done">Завершено</Select.Option>
                     </Select>
                 </Form.Item>
-                <Form.Item name="assignee" label="Исполнитель">
-                    <Select>
-                        <Option value="user1">Пользователь 1</Option>
-                        <Option value="user2">Пользователь 2</Option>
-                    </Select>
+                <Form.Item
+                    name="assignee"
+                    label="Исполнитель"
+                    rules={[{ required: true, message: 'Введите исполнителя' }]}
+                >
+                    <Input />
+                </Form.Item>
+                <Form.Item>
+                    <Button type="primary" htmlType="submit">
+                        Сохранить
+                    </Button>
                 </Form.Item>
             </Form>
         </Modal>

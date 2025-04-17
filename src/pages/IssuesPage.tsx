@@ -1,21 +1,58 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Table, Button } from 'antd';
+import TaskModal from '../components/TaskModal';
 
-const fetchIssues = async () => {
-    const res = await fetch('http://localhost:5000/issues');
-    return res.json();
-};
+interface Task {
+    id: string;
+    title: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    status: 'todo' | 'inprogress' | 'done';
+    assignee: string;
+}
 
 const IssuesPage = () => {
-    const { data, isLoading } = useQuery({ queryKey: ['issues'], queryFn: fetchIssues });
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [modalVisible, setModalVisible] = useState(false);
 
-    if (isLoading) return <div>Загрузка...</div>;
+    const columns = [
+        {
+            title: 'Название',
+            dataIndex: 'title',
+            key: 'title',
+        },
+        {
+            title: 'Описание',
+            dataIndex: 'description',
+            key: 'description',
+        },
+        {
+            title: 'Приоритет',
+            dataIndex: 'priority',
+            key: 'priority',
+        },
+        {
+            title: 'Статус',
+            dataIndex: 'status',
+            key: 'status',
+        },
+        {
+            title: 'Исполнитель',
+            dataIndex: 'assignee',
+            key: 'assignee',
+        },
+    ];
 
     return (
         <div>
-            <h1>Все задачи</h1>
-            {data.map((issue: any) => (
-                <div key={issue.id}>{issue.title}</div>
-            ))}
+            <Button type="primary" onClick={() => setModalVisible(true)}>
+                Создать задачу
+            </Button>
+            <Table dataSource={tasks} columns={columns} rowKey="id" />
+            <TaskModal
+                visible={modalVisible}
+                onCancel={() => setModalVisible(false)}
+            />
         </div>
     );
 };

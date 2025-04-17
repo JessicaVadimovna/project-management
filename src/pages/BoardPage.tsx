@@ -1,4 +1,4 @@
-import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
 interface Task {
     id: string;
@@ -19,20 +19,20 @@ const BoardPage = () => {
         done: [],
     };
 
-    const onDragEnd = (result: DropResult) => {
-        // Логика перемещения задачи
+    const onDragEnd = (_result: DropResult) => {
+        // Логика перемещения задачи будет добавлена позже
     };
 
     return (
         <DragDropContext onDragEnd={onDragEnd}>
             {statuses.map((status) => (
                 <Droppable droppableId={status} key={status}>
-                    {(provided: DroppableProvided) => (
+                    {(provided) => (
                         <div ref={provided.innerRef} {...provided.droppableProps}>
                             <h2>{status}</h2>
                             {tasks[status as keyof Tasks].map((task, index) => (
                                 <Draggable draggableId={task.id} index={index} key={task.id}>
-                                    {(provided: DraggableProvided) => (
+                                    {(provided) => (
                                         <div
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
