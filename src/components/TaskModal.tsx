@@ -12,10 +12,11 @@ interface Task {
 interface TaskModalProps {
     visible: boolean;
     onCancel: () => void;
+    onOk?: (values: Task) => void;
     initialValues?: Partial<Task>;
 }
 
-const TaskModal = ({ visible, onCancel, initialValues }: TaskModalProps) => {
+const TaskModal = ({ visible, onCancel, onOk, initialValues }: TaskModalProps) => {
     const [form] = Form.useForm<Task>();
 
     useEffect(() => {
@@ -28,6 +29,7 @@ const TaskModal = ({ visible, onCancel, initialValues }: TaskModalProps) => {
     const onFinish = (values: Task) => {
         console.log('Сохранено:', values);
         localStorage.removeItem('taskDraft');
+        onOk?.(values);
         onCancel();
     };
 
@@ -36,12 +38,7 @@ const TaskModal = ({ visible, onCancel, initialValues }: TaskModalProps) => {
     };
 
     return (
-        <Modal
-            title="Создать задачу"
-            open={visible}
-            onCancel={onCancel}
-            footer={null}
-        >
+        <Modal title="Создать задачу" open={visible} onCancel={onCancel} footer={null}>
             <Form
                 form={form}
                 layout="vertical"

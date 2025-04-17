@@ -1,4 +1,5 @@
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { useState } from 'react';
 
 interface Task {
     id: string;
@@ -12,15 +13,31 @@ interface Tasks {
 }
 
 const BoardPage = () => {
-    const statuses = ['todo', 'inprogress', 'done'];
-    const tasks: Tasks = {
+    const [tasks, setTasks] = useState<Tasks>({
         todo: [{ id: '1', title: 'Задача 1' }],
         inprogress: [{ id: '2', title: 'Задача 2' }],
         done: [],
-    };
+    });
 
-    const onDragEnd = (_result: DropResult) => {
-        // Логика перемещения задачи будет добавлена позже
+    const statuses = ['todo', 'inprogress', 'done'];
+
+    const onDragEnd = (result: DropResult) => {
+        const { source, destination } = result;
+
+        if (!destination) return;
+
+        if (source.droppableId === destination.droppableId && source.index === destination.index) {
+            return;
+        }
+
+        const newTasks = { ...tasks };
+        const sourceColumn = newTasks[source.droppableId as keyof Tasks];
+        const destinationColumn = newTasks[destination.droppableId as keyof Tasks];
+
+        const [movedTask] = sourceColumn.splice(source.index, 1);
+        destinationColumn.splice(destination.index, 0, movedTask);
+
+        setTasks(newTasks);
     };
 
     return (

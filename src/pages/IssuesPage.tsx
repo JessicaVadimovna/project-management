@@ -15,6 +15,11 @@ const IssuesPage = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [modalVisible, setModalVisible] = useState(false);
 
+    const handleTaskSave = (values: Task) => {
+        setTasks([...tasks, { ...values, id: `${tasks.length + 1}` }]);
+        setModalVisible(false);
+    };
+
     const columns = [
         {
             title: 'Название',
@@ -52,6 +57,7 @@ const IssuesPage = () => {
             <TaskModal
                 visible={modalVisible}
                 onCancel={() => setModalVisible(false)}
+                onOk={handleTaskSave}
             />
         </div>
     );
