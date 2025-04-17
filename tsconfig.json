@@ -1,20 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ESNext",                                  /* Используем последнюю версию ECMAScript */
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],           /* Поддержка DOM и современных API */
-    "module": "ESNext",                                 /* Используем ES-модули для Vite */
-    "moduleResolution": "Node",                         /* Разрешение модулей в стиле Node.js */
-    "jsx": "react-jsx",                                 /* Поддержка JSX для React 17+ */
-    "esModuleInterop": true,                            /* Совместимость с CommonJS */
-    "allowSyntheticDefaultImports": true,               /* Разрешить синтетические импорты по умолчанию */
-    "strict": true,                                     /* Строгая типизация */
-    "forceConsistentCasingInFileNames": true,           /* Проверка регистра в именах файлов */
-    "skipLibCheck": true,                               /* Пропуск проверки .d.ts файлов */
-    "noEmit": true,                                     /* Не генерировать JS файлы (Vite делает это) */
-    "isolatedModules": true,                            /* Поддержка изолированных модулей */
-    "resolveJsonModule": true,                          /* Поддержка импорта JSON */
-    "useDefineForClassFields": true                     /* Современные классовые поля */
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "useDefineForClassFields": true
   },
-  "include": ["src"],                                   /* Включить файлы из папки src */
-  "references": [{ "path": "./tsconfig.node.json" }]    /* Ссылка на tsconfig.node.json для Vite */
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }
