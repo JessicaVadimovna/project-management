@@ -1,27 +1,48 @@
-import { useAppSelector } from '../store/hooks';
-import { Link } from 'react-router-dom';
-import { List, Card } from 'antd';
+import { useEffect } from 'react';
+import { Card } from 'antd';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { setBoards } from '../store/boardsSlice';
+import { useQuery } from '@tanstack/react-query';
+import { fetchBoards, mapServerBoardToClient } from '../api/api';
 import './BoardsPage.css';
+import { Link } from 'react-router-dom';
 
 const BoardsPage = () => {
+  const dispatch = useAppDispatch();
   const boards = useAppSelector(state => state.boards.boards);
+
+  const { data: serverBoards, isLoading, error } = useQuery({
+    queryKey: ['boards'],
+    queryFn: fetchBoards,
+  });
+
+  useEffect(() => {
+    console.log('serverBoards raw:', serverBoards);
+    if (serverBoards && Array.isArray(serverBoards)) {
+      console.log('boardsArray processed:', serverBoards);
+      dispatch(setBoards(serverBoards.map(mapServerBoardToClient)));
+    }
+  }, [serverBoards, dispatch]);
+
+  if (isLoading) return <div>Загрузка...</div>;
+  if (error) return <div>Ошибка загрузки досок: {(error as Error).message}</div>;
 
   return (
     <div className="boards-page">
       <h1>Доски</h1>
-      <List
-        grid={{ gutter: 16, xs: 1, sm: 2, md: 3 }}
-        dataSource={boards}
-        renderItem={board => (
-          <List.Item>
-            <Link to={`/board/${board.id}`}>
+      {boards.length === 0 ? (
+        <div>Доски отсутствуют</div>
+      ) : (
+        <div className="boards-grid">
+          {boards.map(board => (
+            <Link to={`/board/${board.id}`} key={board.id}>
               <Card title={board.title} hoverable>
-                Перейти к доске
+                {board.description || 'Нет описания'}
               </Card>
             </Link>
-          </List.Item>
-        )}
-      />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

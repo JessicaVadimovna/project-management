@@ -1,15 +1,16 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Modal, Form, Input, Select, Button } from 'antd';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { Task } from '../types/task';
-import { addTask, updateTask } from '../store/tasksSlice';
 import { closeModal } from '../store/modalSlice';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createTask, updateTask } from '../api/api';
 
 interface TaskModalProps {
   visible: boolean;
   taskId: string | null;
-  initialValues: Partial<Omit<Task, 'id'>> | null;
+  initialValues: Partial<Omit<Task, 'id'>>;
   redirectToBoard: string | null;
 }
 
@@ -22,8 +23,25 @@ const TaskModal = ({
   const [form] = Form.useForm<Omit<Task, 'id'>>();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const boards = useAppSelector(state => state.boards.boards);
   const users = useAppSelector(state => state.users.users);
+
+  const createMutation = useMutation({
+    mutationFn: createTask,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['boardTasks'] });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: updateTask,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['boardTasks'] });
+    },
+  });
 
   useEffect(() => {
     if (visible) {
@@ -35,12 +53,12 @@ const TaskModal = ({
   const onFinish = (values: Omit<Task, 'id'>) => {
     const task: Task = {
       ...values,
-      id: taskId || `${Date.now()}`,
+      id: taskId || '0',
     };
     if (taskId) {
-      dispatch(updateTask(task));
+      updateMutation.mutate(task);
     } else {
-      dispatch(addTask(task));
+      createMutation.mutate(values);
     }
     localStorage.removeItem('taskDraft');
     dispatch(closeModal());
@@ -140,7 +158,11 @@ const TaskModal = ({
           </Select>
         </Form.Item>
         <Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={createMutation.isPending || updateMutation.isPending}
+          >
             Сохранить
           </Button>
         </Form.Item>

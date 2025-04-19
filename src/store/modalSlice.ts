@@ -4,14 +4,14 @@ import { Task } from '../types/task';
 interface ModalState {
   isOpen: boolean;
   taskId: string | null;
-  initialValues: Partial<Omit<Task, 'id'>> | null;
+  initialValues: Partial<Omit<Task, 'id'>>;
   redirectToBoard: string | null;
 }
 
 const initialState: ModalState = {
   isOpen: false,
   taskId: null,
-  initialValues: null,
+  initialValues: {},
   redirectToBoard: null,
 };
 
@@ -29,13 +29,13 @@ const modalSlice = createSlice({
     ) => {
       state.isOpen = true;
       state.taskId = action.payload.taskId || null;
-      state.initialValues = action.payload.initialValues || null;
+      state.initialValues = action.payload.initialValues || {};
       state.redirectToBoard = action.payload.redirectToBoard || null;
     },
     closeModal: state => {
       state.isOpen = false;
       state.taskId = null;
-      state.initialValues = null;
+      state.initialValues = {};
       state.redirectToBoard = null;
     },
   },

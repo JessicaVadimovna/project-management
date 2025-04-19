@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, Table, Select, Input } from 'antd';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { setTasks } from '../store/tasksSlice';
 import { openModal } from '../store/modalSlice';
+import { useQuery } from '@tanstack/react-query';
+import { fetchTasks, mapServerTaskToClient } from '../api/api';
 import { Task } from '../types/task';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,11 +18,24 @@ const IssuesPage = () => {
   const boards = useAppSelector(state => state.boards.boards);
   const users = useAppSelector(state => state.users.users);
 
-  const [statusFilter, setStatusFilter] = useState<string | undefined>(
-    undefined
-  );
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [boardFilter, setBoardFilter] = useState<string | undefined>(undefined);
   const [searchText, setSearchText] = useState('');
+
+  const { data: serverTasks, isLoading } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: fetchTasks,
+  });
+
+  useEffect(() => {
+    console.log('serverTasks raw:', serverTasks);
+    if (serverTasks && Array.isArray(serverTasks)) {
+      console.log('tasksArray processed:', serverTasks);
+      dispatch(setTasks(serverTasks.map(mapServerTaskToClient)));
+    }
+  }, [serverTasks, dispatch]);
+
+  if (isLoading) return <div>Загрузка...</div>;
 
   const filteredTasks = tasks.filter(task => {
     const matchesStatus = statusFilter ? task.status === statusFilter : true;
@@ -42,6 +58,12 @@ const IssuesPage = () => {
         redirectToBoard: task.boardId,
       })
     );
+  };
+
+  const handleGoToBoard = (task: Task) => {
+    navigate(`/board/${task.boardId}`, {
+      state: { openTaskId: task.id },
+    });
   };
 
   const columns = [
@@ -78,6 +100,13 @@ const IssuesPage = () => {
       key: 'boardId',
       render: (boardId: string) =>
         boards.find(board => board.id === boardId)?.title || 'Без доски',
+    },
+    {
+      title: 'Действия',
+      key: 'actions',
+      render: (_: any, task: Task) => (
+        <Button onClick={() => handleGoToBoard(task)}>Перейти на доску</Button>
+      ),
     },
   ];
 
