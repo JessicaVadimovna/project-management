@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, MutationFunction } from '@tanstack/react-query';
 import { Modal, Form, Input, Select, Button, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { RootState } from '../store';
@@ -42,7 +42,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   useEffect(() => {
     if (visible) {
       if (!isEditing) {
-        // Для создания задачи пытаемся загрузить черновик
         const draft = localStorage.getItem('taskDraft');
         if (draft) {
           const draftValues = JSON.parse(draft);
@@ -61,7 +60,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
             } : undefined,
           });
         } else {
-          // Если черновика нет, используем initialValues
           form.setFieldsValue({
             title: initialValues.title || '',
             description: initialValues.description || '',
@@ -75,7 +73,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
           });
         }
       } else {
-        // Для редактирования используем initialValues
         form.setFieldsValue({
           title: initialValues.title || '',
           description: initialValues.description || '',
@@ -107,14 +104,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const createTaskMutation = useMutation({
-    mutationFn: (task: Omit<Task, 'id'>) => createTask(task),
+    mutationFn: createTask as MutationFunction<Task, Omit<Task, 'id'>>,
     onSuccess: (data, variables) => {
       message.success('Задача создана', 3);
       queryClient.invalidateQueries({ queryKey: ['boardWithTasks', redirectToBoard] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       const newTask = { ...variables, id: data.id?.toString() || Date.now().toString() };
       dispatch(setTasks([...tasks, newTask]));
-      localStorage.removeItem('taskDraft'); // Очищаем черновик
+      localStorage.removeItem('taskDraft');
       handleCancel();
     },
     onError: (error: Error) => {
@@ -123,8 +120,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
     },
   });
 
+  // Мутация для обновления задачи с уведомлением
   const updateTaskMutation = useMutation({
-    mutationFn: (task: Task) => updateTask(task),
+    mutationFn: updateTask as MutationFunction<Task, Task>,
     onSuccess: () => {
       message.success('Задача обновлена', 3);
       const updatedTask = { ...form.getFieldsValue(), id: taskId };
@@ -132,6 +130,21 @@ const TaskModal: React.FC<TaskModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['boardWithTasks', redirectToBoard] });
       handleCancel();
+    },
+    onError: (error: Error) => {
+      message.error('Не удалось обновить задачу', 3);
+      console.error('updateTask error:', error.message);
+    },
+  });
+
+  // Мутация для обновления задачи без уведомления (для перехода на доску)
+  const updateTaskForNavigationMutation = useMutation({
+    mutationFn: updateTask as MutationFunction<Task, Task>,
+    onSuccess: () => {
+      const updatedTask = { ...form.getFieldsValue(), id: taskId };
+      dispatch(setTasks(tasks.map((task: Task) => (task.id === taskId ? updatedTask : task))));
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['boardWithTasks', redirectToBoard] });
     },
     onError: (error: Error) => {
       message.error('Не удалось обновить задачу', 3);
@@ -166,42 +179,55 @@ const TaskModal: React.FC<TaskModalProps> = ({
     form.resetFields();
   };
 
+  const handleGoToBoard = () => {
+    form.validateFields().then(values => {
+      const taskData: Task = {
+        id: taskId || '',
+        title: values.title,
+        description: values.description,
+        priority: values.priority,
+        status: values.status,
+        assignee: values.assignee,
+        boardId: values.boardId?.key || values.boardId,
+      };
+      updateTaskForNavigationMutation.mutate(taskData);
+      navigate(`/board/${values.boardId?.key || values.boardId}`);
+    }).catch(info => {
+      console.log('Validate Failed:', info);
+    });
+  };
+
+  const getFooterButtons = () => {
+    if (!isEditing) {
+      return [
+        <Button key="submit" type="primary" onClick={handleOk}>
+          Создать
+        </Button>,
+      ];
+    } else if (openedFrom === 'allTasks') {
+      return [
+        <Button key="goToBoard" onClick={handleGoToBoard}>
+          Перейти на доску
+        </Button>,
+        <Button key="submit" type="primary" onClick={handleOk}>
+          Обновить
+        </Button>,
+      ];
+    }
+    return [
+      <Button key="submit" type="primary" onClick={handleOk}>
+        Обновить
+      </Button>,
+    ];
+  };
+
   return (
     <Modal
       title={isEditing ? 'Редактировать задачу' : 'Создать задачу'}
       open={visible}
       onCancel={handleCancel}
       maskClosable={true}
-      footer={[
-        !isEditing && openedFrom === 'allTasks' && (
-          <Button
-            key="goToBoard"
-            onClick={() => {
-              form.validateFields().then(values => {
-                createTaskMutation.mutate({
-                  title: values.title,
-                  description: values.description,
-                  priority: values.priority,
-                  status: values.status,
-                  assignee: values.assignee,
-                  boardId: values.boardId?.key || values.boardId,
-                });
-                navigate(`/board/${values.boardId?.key || values.boardId}`);
-              });
-            }}
-          >
-            Перейти на доску
-          </Button>
-        ),
-        <Button key="submit" type="primary" onClick={handleOk}>
-          {isEditing ? 'Обновить' : 'Создать'}
-        </Button>,
-        !isEditing && !isCreatingFromBoard && (
-          <Button key="cancel" onClick={handleCancel}>
-            Отмена
-          </Button>
-        ),
-      ].filter(Boolean)}
+      footer={getFooterButtons()}
     >
       <Form form={form} layout="vertical" onFieldsChange={handleFieldsChange}>
         <Form.Item
