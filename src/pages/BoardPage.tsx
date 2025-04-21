@@ -3,11 +3,12 @@ import { useParams, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setTasks } from '../store/tasksSlice';
 import { setUsers } from '../store/usersSlice';
+import { setBoards } from '../store/boardsSlice'; // Предполагается, что действие существует
 import { openModal } from '../store/modalSlice';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchBoardWithTasks, updateTaskStatus, fetchUsers, mapServerUserToClient } from '../api/api';
+import { fetchBoardWithTasks, updateTaskStatus, fetchUsers, fetchBoards, mapServerUserToClient, mapServerBoardToClient } from '../api/api'; // Добавляем fetchBoards
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Card, Row, Col, Button, message } from 'antd';
+import { Card, Row, Col, message } from 'antd';
 import { Task, User } from '../types/types';
 import './BoardPage.css';
 
@@ -31,10 +32,16 @@ const BoardPage = () => {
     queryFn: ({ signal }) => fetchUsers(signal),
   });
 
+  // Запрос для загрузки списка досок
+  const { data: serverBoards, isLoading: isBoardsLoading, error: boardsError } = useQuery({
+    queryKey: ['boards'],
+    queryFn: ({ signal }) => fetchBoards(signal),
+  });
+
   // Сохраняем задачи в Redux
   useEffect(() => {
     if (data) {
-      console.log('Tasks saved to Redux:', data.tasks); // Для отладки
+      console.log('Tasks saved to Redux:', data.tasks);
       dispatch(setTasks(data.tasks));
     }
   }, [data, dispatch]);
@@ -42,12 +49,22 @@ const BoardPage = () => {
   // Сохраняем пользователей в Redux
   useEffect(() => {
     if (serverUsers && Array.isArray(serverUsers)) {
-      console.log('Loaded serverUsers:', serverUsers); // Для отладки
+      console.log('Loaded serverUsers:', serverUsers);
       const mappedUsers = serverUsers.map(mapServerUserToClient);
-      console.log('Mapped users:', mappedUsers); // Для отладки
+      console.log('Mapped users:', mappedUsers);
       dispatch(setUsers(mappedUsers));
     }
   }, [serverUsers, dispatch]);
+
+  // Сохраняем доски в Redux
+  useEffect(() => {
+    if (serverBoards && Array.isArray(serverBoards)) {
+      console.log('Loaded serverBoards:', serverBoards);
+      const mappedBoards = serverBoards.map(mapServerBoardToClient);
+      console.log('Mapped boards:', mappedBoards);
+      dispatch(setBoards(mappedBoards));
+    }
+  }, [serverBoards, dispatch]);
 
   // Открытие модального окна для задачи, если передан openTaskId
   useEffect(() => {
@@ -117,12 +134,12 @@ const BoardPage = () => {
 
   const getAssigneeName = (assigneeId: string) => {
     const user = users.find((user: User) => user.id === assigneeId);
-    console.log(`Looking for assigneeId: ${assigneeId}, Found user:`, user); // Для отладки
+    console.log(`Looking for assigneeId: ${assigneeId}, Found user:`, user);
     return user ? user.name : 'Не назначен';
   };
 
-  if (isLoading || isUsersLoading) return <div className="loading">Загрузка...</div>;
-  if (error || usersError) return <div className="error">Ошибка: {(error as Error)?.message || (usersError as Error)?.message}</div>;
+  if (isLoading || isUsersLoading || isBoardsLoading) return <div className="loading">Загрузка...</div>;
+  if (error || usersError || boardsError) return <div className="error">Ошибка: {(error as Error)?.message || (usersError as Error)?.message || (boardsError as Error)?.message}</div>;
 
   const { board, tasks: boardTasks } = data || { board: null, tasks: [] };
 

@@ -38,27 +38,83 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const isEditing = !!taskId;
   const openedFrom = redirectToBoard || isCreatingFromBoard ? 'board' : 'allTasks';
 
+  // Восстанавливаем черновик при открытии модального окна
   useEffect(() => {
     if (visible) {
-      form.setFieldsValue({
-        title: initialValues.title || '',
-        description: initialValues.description || '',
-        priority: initialValues.priority || 'medium',
-        status: initialValues.status || 'backlog',
-        assignee: initialValues.assignee || '',
-        boardId: initialValues.boardId ? { key: initialValues.boardId, label: initialValues.boardName || boards.find(b => b.id === initialValues.boardId)?.title || 'Не указана' } : undefined,
-      });
+      if (!isEditing) {
+        // Для создания задачи пытаемся загрузить черновик
+        const draft = localStorage.getItem('taskDraft');
+        if (draft) {
+          const draftValues = JSON.parse(draft);
+          form.setFieldsValue({
+            title: draftValues.title || '',
+            description: draftValues.description || '',
+            priority: draftValues.priority || 'medium',
+            status: draftValues.status || 'backlog',
+            assignee: draftValues.assignee || '',
+            boardId: draftValues.boardId ? {
+              key: draftValues.boardId,
+              label: boards.find(b => b.id === draftValues.boardId)?.title || 'Не указана'
+            } : initialValues.boardId ? {
+              key: initialValues.boardId,
+              label: initialValues.boardName || boards.find(b => b.id === initialValues.boardId)?.title || 'Не указана'
+            } : undefined,
+          });
+        } else {
+          // Если черновика нет, используем initialValues
+          form.setFieldsValue({
+            title: initialValues.title || '',
+            description: initialValues.description || '',
+            priority: initialValues.priority || 'medium',
+            status: initialValues.status || 'backlog',
+            assignee: initialValues.assignee || '',
+            boardId: initialValues.boardId ? {
+              key: initialValues.boardId,
+              label: initialValues.boardName || boards.find(b => b.id === initialValues.boardId)?.title || 'Не указана'
+            } : undefined,
+          });
+        }
+      } else {
+        // Для редактирования используем initialValues
+        form.setFieldsValue({
+          title: initialValues.title || '',
+          description: initialValues.description || '',
+          priority: initialValues.priority || 'medium',
+          status: initialValues.status || 'backlog',
+          assignee: initialValues.assignee || '',
+          boardId: initialValues.boardId ? {
+            key: initialValues.boardId,
+            label: initialValues.boardName || boards.find(b => b.id === initialValues.boardId)?.title || 'Не указана'
+          } : undefined,
+        });
+      }
     }
-  }, [visible, initialValues, form, boards]);
+  }, [visible, initialValues, form, boards, isEditing]);
+
+  // Сохраняем черновик при изменении формы
+  const handleFieldsChange = () => {
+    if (!isEditing) {
+      const values = form.getFieldsValue();
+      localStorage.setItem('taskDraft', JSON.stringify({
+        title: values.title,
+        description: values.description,
+        priority: values.priority,
+        status: values.status,
+        assignee: values.assignee,
+        boardId: values.boardId?.key || values.boardId,
+      }));
+    }
+  };
 
   const createTaskMutation = useMutation({
     mutationFn: (task: Omit<Task, 'id'>) => createTask(task),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       message.success('Задача создана', 3);
       queryClient.invalidateQueries({ queryKey: ['boardWithTasks', redirectToBoard] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      const newTask = { ...task, id: data.id?.toString() || Date.now().toString() };
+      const newTask = { ...variables, id: data.id?.toString() || Date.now().toString() };
       dispatch(setTasks([...tasks, newTask]));
+      localStorage.removeItem('taskDraft'); // Очищаем черновик
       handleCancel();
     },
     onError: (error: Error) => {
@@ -92,7 +148,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         priority: values.priority,
         status: values.status,
         assignee: values.assignee,
-        boardId: values.boardId?.key || values.boardId, // Извлекаем boardId из объекта или используем напрямую
+        boardId: values.boardId?.key || values.boardId,
       };
 
       if (isEditing) {
@@ -147,7 +203,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         ),
       ].filter(Boolean)}
     >
-      <Form form={form} layout="vertical">
+      <Form form={form} layout="vertical" onFieldsChange={handleFieldsChange}>
         <Form.Item
           name="title"
           label="Название"
@@ -169,7 +225,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
           <Select
             placeholder="Выберите доску"
             disabled={isEditing || isCreatingFromBoard}
-            labelInValue // Включаем labelInValue для хранения label
+            labelInValue
           >
             {boards.map(board => (
               <Option key={board.id} value={board.id}>{board.title}</Option>
