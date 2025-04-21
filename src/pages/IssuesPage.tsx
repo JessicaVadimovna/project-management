@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchTasks, mapServerTaskToClient } from '../api/api';
 import { Task } from '../types/task';
 import { useNavigate } from 'react-router-dom';
+import './IssuesPage.css';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -24,68 +25,51 @@ const IssuesPage = () => {
 
   const { data: serverTasks, isLoading } = useQuery({
     queryKey: ['tasks'],
-    queryFn: fetchTasks,
+    queryFn: ({ signal }) => fetchTasks(signal),
   });
 
   useEffect(() => {
-    console.log('serverTasks raw:', serverTasks);
     if (serverTasks && Array.isArray(serverTasks)) {
-      console.log('tasksArray processed:', serverTasks);
       dispatch(setTasks(serverTasks.map(mapServerTaskToClient)));
     }
   }, [serverTasks, dispatch]);
 
-  if (isLoading) return <div>Загрузка...</div>;
-
   const filteredTasks = tasks.filter(task => {
     const matchesStatus = statusFilter ? task.status === statusFilter : true;
     const matchesBoard = boardFilter ? task.boardId === boardFilter : true;
+    const assigneeName = users.find(user => user.id === task.assignee)?.name || '';
     const matchesSearch =
       task.title.toLowerCase().includes(searchText.toLowerCase()) ||
-      users
-        .find(user => user.id === task.assignee)
-        ?.name.toLowerCase()
-        .includes(searchText.toLowerCase()) ||
-      false;
+      assigneeName.toLowerCase().includes(searchText.toLowerCase());
     return matchesStatus && matchesBoard && matchesSearch;
   });
 
   const handleRowClick = (task: Task) => {
-    dispatch(
-      openModal({
-        taskId: task.id,
-        initialValues: task,
-        redirectToBoard: task.boardId,
-      })
-    );
+    dispatch(openModal({ taskId: task.id, initialValues: task }));
   };
 
   const handleGoToBoard = (task: Task) => {
-    navigate(`/board/${task.boardId}`, {
-      state: { openTaskId: task.id },
-    });
+    navigate(`/board/${task.boardId}`, { state: { openTaskId: task.id } });
   };
 
   const columns = [
-    {
-      title: 'Название',
-      dataIndex: 'title',
-      key: 'title',
-    },
-    {
-      title: 'Описание',
-      dataIndex: 'description',
-      key: 'description',
-    },
+    { title: 'Название', dataIndex: 'title', key: 'title' },
+    { title: 'Описание', dataIndex: 'description', key: 'description' },
     {
       title: 'Приоритет',
       dataIndex: 'priority',
       key: 'priority',
+      render: (priority: string) =>
+        priority === 'low' ? 'Низкий' :
+          priority === 'medium' ? 'Средний' : 'Высокий',
     },
     {
       title: 'Статус',
       dataIndex: 'status',
       key: 'status',
+      render: (status: string) =>
+        status === 'backlog' ? 'Бэклог' :
+          status === 'inprogress' ? 'В процессе' : 'Завершено',
     },
     {
       title: 'Исполнитель',
@@ -105,19 +89,23 @@ const IssuesPage = () => {
       title: 'Действия',
       key: 'actions',
       render: (_: any, task: Task) => (
-        <Button onClick={() => handleGoToBoard(task)}>Перейти на доску</Button>
+        <Button onClick={() => handleGoToBoard(task)} className="action-button">
+          Перейти на доску
+        </Button>
       ),
     },
   ];
 
+  if (isLoading) return <div className="loading">Загрузка...</div>;
+
   return (
-    <div>
-      <div
-        style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap' }}
-      >
+    <div className="issues-page page-container">
+      <h1>Все задачи</h1>
+      <div className="filters">
         <Button
           type="primary"
           onClick={() => dispatch(openModal({ initialValues: {} }))}
+          className="create-task-button"
         >
           Создать задачу
         </Button>
@@ -125,9 +113,9 @@ const IssuesPage = () => {
           placeholder="Фильтр по статусу"
           style={{ width: 200 }}
           allowClear
-          onChange={value => setStatusFilter(value)}
+          onChange={setStatusFilter}
         >
-          <Option value="todo">К выполнению</Option>
+          <Option value="backlog">Бэклог</Option>
           <Option value="inprogress">В процессе</Option>
           <Option value="done">Завершено</Option>
         </Select>
@@ -135,17 +123,15 @@ const IssuesPage = () => {
           placeholder="Фильтр по доске"
           style={{ width: 200 }}
           allowClear
-          onChange={value => setBoardFilter(value)}
+          onChange={setBoardFilter}
         >
           {boards.map(board => (
-            <Option key={board.id} value={board.id}>
-              {board.title}
-            </Option>
+            <Option key={board.id} value={board.id}>{board.title}</Option>
           ))}
         </Select>
         <Search
           placeholder="Поиск по названию или исполнителю"
-          onSearch={value => setSearchText(value)}
+          onSearch={setSearchText}
           style={{ width: 300 }}
         />
       </div>
@@ -153,10 +139,8 @@ const IssuesPage = () => {
         dataSource={filteredTasks}
         columns={columns}
         rowKey="id"
-        onRow={record => ({
-          onClick: () => handleRowClick(record),
-          style: { cursor: 'pointer' },
-        })}
+        onRow={record => ({ onClick: () => handleRowClick(record), style: { cursor: 'pointer' } })}
+        className="issues-table"
       />
     </div>
   );

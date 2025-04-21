@@ -1,11 +1,28 @@
 .app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  min-height: 100vh;
+  background-color: #f0f2f5;
 }
 
+.main-content {
+  padding-top: 64px; /* Отступ для хедера */
+  padding-bottom: 20px;
+  min-height: calc(100vh - 64px);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Общий стиль для контейнеров страниц */
+.page-container {
+  width: 100%;
+  max-width: 1400px; /* Ограничение ширины для центрирования */
+  margin: 0 auto; /* Центрирование */
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+
 @media (max-width: 768px) {
-  .app {
+  .page-container {
     padding: 10px;
   }
 }

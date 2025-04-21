@@ -1,9 +1,17 @@
-.boards-page {
-  padding: 20px;
+.boards-page h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.boards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  width: 100%;
 }
 
 @media (max-width: 768px) {
-  .boards-page {
-    padding: 10px;
+  .boards-grid {
+    grid-template-columns: 1fr;
   }
 }

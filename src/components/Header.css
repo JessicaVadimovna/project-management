@@ -1,27 +1,76 @@
 .header {
-  background: #001529;
-  padding: 10px 20px;
-  color: white;
-}
-
-nav {
+  background-color: #001529;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  height: 64px; /* Фиксированная высота */
   display: flex;
-  gap: 20px;
   align-items: center;
 }
 
-nav a {
-  color: white;
-  text-decoration: none;
+.nav-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 1400px; /* Увеличен max-width для большего пространства */
+  margin: 0 auto;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-nav a:hover {
-  text-decoration: underline;
+.nav-links {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.nav-links a {
+  color: #fff;
+  font-size: 16px;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.nav-links a:hover {
+  color: #1890ff;
+}
+
+.create-task-btn {
+  margin-left: auto;
 }
 
 @media (max-width: 768px) {
-  nav {
+  .header {
+    height: auto; /* На мобильных устройствах высота адаптивная */
+    padding: 12px 10px;
+  }
+
+  .nav-container {
     flex-direction: column;
-    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .nav-links {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .nav-links a {
+    font-size: 14px;
+  }
+
+  .create-task-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-links a {
+    font-size: 12px;
   }
 }

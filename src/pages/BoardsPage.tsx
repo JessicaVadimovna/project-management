@@ -17,9 +17,7 @@ const BoardsPage = () => {
   });
 
   useEffect(() => {
-    console.log('serverBoards raw:', serverBoards);
     if (serverBoards && Array.isArray(serverBoards)) {
-      console.log('boardsArray processed:', serverBoards);
       dispatch(setBoards(serverBoards.map(mapServerBoardToClient)));
     }
   }, [serverBoards, dispatch]);
@@ -28,7 +26,7 @@ const BoardsPage = () => {
   if (error) return <div>Ошибка загрузки досок: {(error as Error).message}</div>;
 
   return (
-    <div className="boards-page">
+    <div className="boards-page page-container">
       <h1>Доски</h1>
       {boards.length === 0 ? (
         <div>Доски отсутствуют</div>

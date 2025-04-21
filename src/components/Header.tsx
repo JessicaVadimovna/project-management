@@ -13,10 +13,12 @@ const Header = () => {
 
   return (
     <header className="header">
-      <nav>
-        <Link to="/issues">Все задачи</Link>
-        <Link to="/boards">Доски</Link>
-        <Button type="primary" onClick={handleCreateTask}>
+      <nav className="nav-container">
+        <div className="nav-links">
+          <Link to="/issues">Все задачи</Link>
+          <Link to="/boards">Проекты</Link>
+        </div>
+        <Button type="primary" onClick={handleCreateTask} className="create-task-btn">
           Создать задачу
         </Button>
       </nav>

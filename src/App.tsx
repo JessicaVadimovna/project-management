@@ -13,13 +13,13 @@ import './App.css';
 
 function App() {
   const dispatch = useAppDispatch();
-  const { isOpen, taskId, initialValues, redirectToBoard } = useAppSelector(
+  const { isOpen, taskId, initialValues, redirectToBoard, isCreatingFromBoard } = useAppSelector(
     state => state.modal
   );
 
   const { data: serverUsers, isLoading } = useQuery({
     queryKey: ['users'],
-    queryFn: fetchUsers,
+    queryFn: ({ signal }) => fetchUsers(signal),
   });
 
   useEffect(() => {
@@ -33,17 +33,20 @@ function App() {
   return (
     <div className="app">
       <Header />
-      <Routes>
-        <Route path="/" element={<BoardsPage />} /> {/* Добавлен маршрут для корня */}
-        <Route path="/issues" element={<IssuesPage />} />
-        <Route path="/boards" element={<BoardsPage />} />
-        <Route path="/board/:id" element={<BoardPage />} />
-      </Routes>
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<BoardsPage />} />
+          <Route path="/issues" element={<IssuesPage />} />
+          <Route path="/boards" element={<BoardsPage />} />
+          <Route path="/board/:id" element={<BoardPage />} />
+        </Routes>
+      </main>
       <TaskModal
         visible={isOpen}
         taskId={taskId}
         initialValues={initialValues}
         redirectToBoard={redirectToBoard}
+        isCreatingFromBoard={isCreatingFromBoard}
       />
     </div>
   );
