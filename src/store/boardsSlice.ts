@@ -1,4 +1,3 @@
-// boardsSlice.ts
 import { createSlice } from '@reduxjs/toolkit';
 import { Board } from '../types/board';
 

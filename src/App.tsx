@@ -1,4 +1,3 @@
-// App.tsx
 import { Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

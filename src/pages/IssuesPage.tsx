@@ -1,4 +1,3 @@
-// IssuesPage.tsx
 import { useState, useEffect } from 'react';
 import { Button, Table, Select, Input } from 'antd';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
@@ -6,10 +5,11 @@ import { setTasks } from '../store/tasksSlice';
 import { setBoards } from '../store/boardsSlice';
 import { setUsers } from '../store/usersSlice';
 import { openModal } from '../store/modalSlice';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { fetchTasks, fetchBoards, fetchUsers, mapServerTaskToClient, mapServerBoardToClient, mapServerUserToClient } from '../api/api';
 import { Task, User, Board } from '../types/types';
-import { useNavigate } from 'react-router-dom';
+// Импорт useNavigate оставляем для будущего использования
+// import { useNavigate } from 'react-router-dom';
 import { ColumnsType } from 'antd/es/table';
 import './IssuesPage.css';
 
@@ -18,8 +18,9 @@ const { Search } = Input;
 
 const IssuesPage = () => {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  // Оставляем навигацию для будущего использования
+  // const navigate = useNavigate();
+  // QueryClient также оставляем для будущего использования
 
   const tasks = useAppSelector((state) => state.tasks.tasks) as Task[];
   const boards = useAppSelector((state) => state.boards.boards) as Board[];
@@ -49,7 +50,7 @@ const IssuesPage = () => {
 
   const { data: serverBoards, isLoading: isBoardsLoading } = useQuery({
     queryKey: ['boards'],
-    queryFn: fetchBoards,
+    queryFn: ({ signal }) => fetchBoards(signal),
   });
 
   useEffect(() => {
@@ -88,16 +89,29 @@ const IssuesPage = () => {
     dispatch(openModal({ taskId: task.id, initialValues: task }));
   };
 
+  // Закомментированная функция оставлена для будущего использования
+  /*
   const handleGoToBoard = (task: Task) => {
     if (task.boardId) {
       navigate(`/board/${task.boardId}`, { state: { openTaskId: task.id } });
     }
   };
+  */
 
   const handleCreateTask = () => {
     dispatch(openModal({ initialValues: {} }));
   };
 
+  const columns: ColumnsType<Task> = [
+    {
+      title: 'Название',
+      dataIndex: 'title',
+      key: 'title',
+    },
+  ];
+
+  // Эти колонки для расширенного просмотра, когда понадобится
+  /*
   const columns: ColumnsType<Task> = [
     { title: 'Название', dataIndex: 'title', key: 'title' },
     {
@@ -152,6 +166,7 @@ const IssuesPage = () => {
       ),
     },
   ];
+  */
 
   if (isTasksLoading || isBoardsLoading || isUsersLoading) {
     return <div className="loading">Загрузка...</div>;

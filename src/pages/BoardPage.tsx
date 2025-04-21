@@ -3,7 +3,7 @@ import { useParams, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setTasks } from '../store/tasksSlice';
 import { setUsers } from '../store/usersSlice';
-import { setBoards } from '../store/boardsSlice'; // Предполагается, что действие существует
+import { setBoards } from '../store/boardsSlice';
 import { openModal } from '../store/modalSlice';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchBoardWithTasks, updateTaskStatus, fetchUsers, fetchBoards, mapServerUserToClient, mapServerBoardToClient } from '../api/api'; // Добавляем fetchBoards

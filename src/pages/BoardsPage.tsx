@@ -1,6 +1,4 @@
-// BoardsPage.tsx
 import { useEffect } from 'react';
-import { Card } from 'antd';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setBoards } from '../store/boardsSlice';
 import { useQuery } from '@tanstack/react-query';
@@ -33,13 +31,14 @@ const BoardsPage = () => {
       {boards.length === 0 ? (
         <div>Доски отсутствуют</div>
       ) : (
-        <div className="boards-grid">
-          {boards.map(board => (
-            <Link to={`/board/${board.id}`} key={board.id}>
-              <Card title={board.title} hoverable>
-                {board.description || 'Нет описания'}
-              </Card>
-            </Link>
+        <div className="boards-list">
+          {boards.map((board) => (
+            <div className="board-item" key={board.id}>
+              <span className="board-title">{board.title}</span>
+              <Link to={`/board/${board.id}`}>
+                <button className="go-to-board-button">Перейти к доске</button>
+              </Link>
+            </div>
           ))}
         </div>
       )}

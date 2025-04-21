@@ -1,4 +1,3 @@
-// modalSlice.ts
 import { createSlice } from '@reduxjs/toolkit';
 import { Task } from '../types/task';
 
