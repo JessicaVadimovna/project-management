@@ -7,6 +7,7 @@ import IssuesPage from './pages/IssuesPage';
 import BoardPage from './pages/BoardPage';
 import TaskModal from './components/TaskModal';
 import { store } from './store';
+// import { useAppInitialization } from './hooks/useAppInitialization';
 import { useAppSelector } from './store/hooks';
 import { RootState } from './store';
 import './App.css';
@@ -41,6 +42,8 @@ function AppContent() {
 }
 
 function App() {
+  // Инициализация данных
+  // useAppInitialization();
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
