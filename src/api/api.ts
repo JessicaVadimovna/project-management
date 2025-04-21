@@ -45,7 +45,8 @@ interface TaskResponse {
   boardId?: string | number;
 }
 
-axios.defaults.baseURL = 'http://127.0.0.1:8080/api/v1';
+// Установка baseURL из переменной окружения или дефолтного значения
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8080/api/v1';
 
 // Вспомогательная функция для нормализации статуса
 const normalizeStatusForServer = (status: Task['status']): string => {
