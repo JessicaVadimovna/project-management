@@ -1,15 +1,17 @@
+// BoardsPage.tsx
 import { useEffect } from 'react';
 import { Card } from 'antd';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setBoards } from '../store/boardsSlice';
 import { useQuery } from '@tanstack/react-query';
 import { fetchBoards, mapServerBoardToClient } from '../api/api';
+import { Board } from '../types/types';
 import './BoardsPage.css';
 import { Link } from 'react-router-dom';
 
 const BoardsPage = () => {
   const dispatch = useAppDispatch();
-  const boards = useAppSelector(state => state.boards.boards);
+  const boards = useAppSelector(state => state.boards.boards) as Board[];
 
   const { data: serverBoards, isLoading, error } = useQuery({
     queryKey: ['boards'],

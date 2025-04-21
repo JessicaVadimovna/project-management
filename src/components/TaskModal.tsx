@@ -1,150 +1,178 @@
-import React, { useEffect } from 'react';
-import { Modal, Form, Input, Select, Button, message } from 'antd';
-import { useAppSelector, useAppDispatch } from '../store/hooks';
-import { Task } from '../types/task';
-import { closeModal } from '../store/modalSlice';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Modal, Form, Input, Select, Button, message } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { RootState } from '../store';
+import { closeModal } from '../store/modalSlice';
+import { setTasks } from '../store/tasksSlice';
 import { createTask, updateTask } from '../api/api';
+import { Task, Board, User } from '../types/types';
+
+const { Option } = Select;
 
 interface TaskModalProps {
   visible: boolean;
   taskId: string | null;
-  initialValues: Partial<Omit<Task, 'id'>>;
+  initialValues: Partial<Omit<Task, 'id'>> & { boardName?: string } | undefined;
   redirectToBoard: string | null;
-  isCreatingFromBoard?: boolean;
+  isCreatingFromBoard: boolean;
 }
 
-const TaskModal = ({
+const TaskModal: React.FC<TaskModalProps> = ({
   visible,
   taskId,
-  initialValues,
+  initialValues = {},
   redirectToBoard,
-  isCreatingFromBoard = false,
-}: TaskModalProps) => {
-  const [form] = Form.useForm<Omit<Task, 'id'>>();
-  const dispatch = useAppDispatch();
+  isCreatingFromBoard,
+}) => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const boards = useAppSelector(state => state.boards.boards);
-  const users = useAppSelector(state => state.users.users);
-  const isFromIssuesPage = !redirectToBoard && taskId;
+  const [form] = Form.useForm();
 
-  const createMutation = useMutation({
-    mutationFn: createTask,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['boardTasks'] });
-      localStorage.removeItem('taskDraft');
-      message.success('Задача успешно создана', 3);
-    },
-    onError: (error: any) => {
-      message.error('Не удалось создать задачу. Проверьте данные и попробуйте снова.', 3);
-      console.error('createTask error:', error.response?.data || error.message);
-    },
-  });
+  const boards = useSelector((state: RootState) => state.boards.boards) as Board[];
+  const users = useSelector((state: RootState) => state.users.users) as User[];
+  const tasks = useSelector((state: RootState) => state.tasks.tasks) as Task[];
 
-  const updateMutation = useMutation({
-    mutationFn: updateTask,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['boardTasks'] });
-      message.success('Задача успешно обновлена', 3);
-    },
-    onError: (error: any) => {
-      message.error('Не удалось обновить задачу.', 3);
-      console.error('updateTask error:', error.response?.data || error.message);
-    },
-  });
+  const isEditing = !!taskId;
+  const openedFrom = redirectToBoard || isCreatingFromBoard ? 'board' : 'allTasks';
 
   useEffect(() => {
     if (visible) {
-      if (taskId) {
-        form.setFieldsValue(initialValues);
+      form.setFieldsValue({
+        title: initialValues.title || '',
+        description: initialValues.description || '',
+        priority: initialValues.priority || 'medium',
+        status: initialValues.status || 'backlog',
+        assignee: initialValues.assignee || '',
+        boardId: initialValues.boardId ? { key: initialValues.boardId, label: initialValues.boardName || boards.find(b => b.id === initialValues.boardId)?.title || 'Не указана' } : undefined,
+      });
+    }
+  }, [visible, initialValues, form, boards]);
+
+  const createTaskMutation = useMutation({
+    mutationFn: (task: Omit<Task, 'id'>) => createTask(task),
+    onSuccess: (data) => {
+      message.success('Задача создана', 3);
+      queryClient.invalidateQueries({ queryKey: ['boardWithTasks', redirectToBoard] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      const newTask = { ...task, id: data.id?.toString() || Date.now().toString() };
+      dispatch(setTasks([...tasks, newTask]));
+      handleCancel();
+    },
+    onError: (error: Error) => {
+      message.error('Не удалось создать задачу', 3);
+      console.error('createTask error:', error.message);
+    },
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: (task: Task) => updateTask(task),
+    onSuccess: () => {
+      message.success('Задача обновлена', 3);
+      const updatedTask = { ...form.getFieldsValue(), id: taskId };
+      dispatch(setTasks(tasks.map((task: Task) => (task.id === taskId ? updatedTask : task))));
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['boardWithTasks', redirectToBoard] });
+      handleCancel();
+    },
+    onError: (error: Error) => {
+      message.error('Не удалось обновить задачу', 3);
+      console.error('updateTask error:', error.message);
+    },
+  });
+
+  const handleOk = () => {
+    form.validateFields().then(values => {
+      const taskData: Task = {
+        id: taskId || '',
+        title: values.title,
+        description: values.description,
+        priority: values.priority,
+        status: values.status,
+        assignee: values.assignee,
+        boardId: values.boardId?.key || values.boardId, // Извлекаем boardId из объекта или используем напрямую
+      };
+
+      if (isEditing) {
+        updateTaskMutation.mutate(taskData);
       } else {
-        const draft = localStorage.getItem('taskDraft');
-        form.setFieldsValue(draft ? JSON.parse(draft) : initialValues);
+        createTaskMutation.mutate(taskData);
       }
-    }
-  }, [visible, taskId, initialValues, form]);
-
-  const onValuesChange = (_: Partial<Omit<Task, 'id'>>, allValues: Omit<Task, 'id'>) => {
-    if (!taskId) {
-      localStorage.setItem('taskDraft', JSON.stringify(allValues));
-    }
-  };
-
-  const onFinish = (values: Omit<Task, 'id'>) => {
-    const task: Task = { ...values, id: taskId || '0' };
-    if (taskId) {
-      updateMutation.mutate(task);
-    } else {
-      createMutation.mutate(values);
-    }
-    dispatch(closeModal());
-    if (redirectToBoard) {
-      navigate(`/board/${redirectToBoard}`);
-    } else if (isFromIssuesPage && task.boardId) {
-      navigate(`/board/${task.boardId}`, { state: { openTaskId: task.id } });
-    }
-    form.resetFields();
+    }).catch(info => {
+      console.log('Validate Failed:', info);
+    });
   };
 
   const handleCancel = () => {
     dispatch(closeModal());
-    if (taskId) {
-      localStorage.removeItem('taskDraft');
-    }
     form.resetFields();
-  };
-
-  const handleGoToBoard = () => {
-    if (taskId && initialValues.boardId) {
-      navigate(`/board/${initialValues.boardId}`, { state: { openTaskId: taskId } });
-    }
   };
 
   return (
     <Modal
-      title={taskId ? 'Редактировать задачу' : 'Создать задачу'}
+      title={isEditing ? 'Редактировать задачу' : 'Создать задачу'}
       open={visible}
       onCancel={handleCancel}
-      footer={null}
-      centered
-      width={600}
-      className="task-modal"
+      maskClosable={true}
+      footer={[
+        !isEditing && openedFrom === 'allTasks' && (
+          <Button
+            key="goToBoard"
+            onClick={() => {
+              form.validateFields().then(values => {
+                createTaskMutation.mutate({
+                  title: values.title,
+                  description: values.description,
+                  priority: values.priority,
+                  status: values.status,
+                  assignee: values.assignee,
+                  boardId: values.boardId?.key || values.boardId,
+                });
+                navigate(`/board/${values.boardId?.key || values.boardId}`);
+              });
+            }}
+          >
+            Перейти на доску
+          </Button>
+        ),
+        <Button key="submit" type="primary" onClick={handleOk}>
+          {isEditing ? 'Обновить' : 'Создать'}
+        </Button>,
+        !isEditing && !isCreatingFromBoard && (
+          <Button key="cancel" onClick={handleCancel}>
+            Отмена
+          </Button>
+        ),
+      ].filter(Boolean)}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={onFinish}
-        onValuesChange={onValuesChange}
-        initialValues={initialValues}
-      >
+      <Form form={form} layout="vertical">
         <Form.Item
           name="title"
           label="Название"
-          rules={[{ required: true, message: 'Введите название' }]}
+          rules={[
+            { required: true, message: 'Введите название задачи' },
+            { min: 3, message: 'Название должно содержать минимум 3 символа' },
+          ]}
         >
           <Input placeholder="Введите название задачи" />
         </Form.Item>
-        <Form.Item
-          name="description"
-          label="Описание"
-          rules={[{ required: true, message: 'Введите описание' }]}
-        >
-          <Input.TextArea placeholder="Введите описание задачи" rows={4} />
+        <Form.Item name="description" label="Описание">
+          <Input.TextArea rows={4} placeholder="Введите описание задачи" />
         </Form.Item>
         <Form.Item
           name="boardId"
           label="Доска"
           rules={[{ required: true, message: 'Выберите доску' }]}
         >
-          <Select disabled={isCreatingFromBoard} placeholder="Выберите доску">
+          <Select
+            placeholder="Выберите доску"
+            disabled={isEditing || isCreatingFromBoard}
+            labelInValue // Включаем labelInValue для хранения label
+          >
             {boards.map(board => (
-              <Select.Option key={board.id} value={board.id}>
-                {board.title}
-              </Select.Option>
+              <Option key={board.id} value={board.id}>{board.title}</Option>
             ))}
           </Select>
         </Form.Item>
@@ -154,9 +182,9 @@ const TaskModal = ({
           rules={[{ required: true, message: 'Выберите приоритет' }]}
         >
           <Select placeholder="Выберите приоритет">
-            <Select.Option value="low">Низкий</Select.Option>
-            <Select.Option value="medium">Средний</Select.Option>
-            <Select.Option value="high">Высокий</Select.Option>
+            <Option value="low">Низкий</Option>
+            <Option value="medium">Средний</Option>
+            <Option value="high">Высокий</Option>
           </Select>
         </Form.Item>
         <Form.Item
@@ -165,53 +193,21 @@ const TaskModal = ({
           rules={[{ required: true, message: 'Выберите статус' }]}
         >
           <Select placeholder="Выберите статус">
-            <Select.Option value="backlog">Бэклог</Select.Option>
-            <Select.Option value="inprogress">В процессе</Select.Option>
-            <Select.Option value="done">Завершено</Select.Option>
+            <Option value="backlog">Бэклог</Option>
+            <Option value="inprogress">В процессе</Option>
+            <Option value="done">Завершено</Option>
           </Select>
         </Form.Item>
         <Form.Item
           name="assignee"
           label="Исполнитель"
-          rules={[
-            { required: true, message: 'Выберите исполнителя' },
-            {
-              validator: (_, value) => {
-                const assigneeId = parseInt(value);
-                if (!assigneeId || assigneeId <= 0) {
-                  return Promise.reject(new Error('Исполнитель должен быть корректным'));
-                }
-                const userExists = users.some(user => user.id === value);
-                if (!userExists) {
-                  return Promise.reject(new Error('Такого исполнителя не существует'));
-                }
-                return Promise.resolve();
-              },
-            },
-          ]}
+          rules={[{ required: true, message: 'Выберите исполнителя' }]}
         >
           <Select placeholder="Выберите исполнителя">
             {users.map(user => (
-              <Select.Option key={user.id} value={user.id}>
-                {user.name}
-              </Select.Option>
+              <Option key={user.id} value={user.id}>{user.name}</Option>
             ))}
           </Select>
-        </Form.Item>
-        <Form.Item>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-            {isFromIssuesPage && (
-              <Button onClick={handleGoToBoard} className="action-button">Перейти на доску</Button>
-            )}
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={createMutation.isPending || updateMutation.isPending}
-              className="submit-button"
-            >
-              {taskId ? 'Обновить' : 'Создать'}
-            </Button>
-          </div>
         </Form.Item>
       </Form>
     </Modal>

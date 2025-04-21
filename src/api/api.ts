@@ -1,36 +1,50 @@
 import axios, { AxiosError } from 'axios';
-import { Task } from '../types/task';
+import { Task, Board, User } from '../types/types';
 
 interface ServerUser {
   id: number | string;
   fullName?: string;
-  name?: string;
-  username?: string;
+  email?: string;
+  avatarUrl?: string;
+  description?: string;
+  tasksCount?: number;
+  teamId?: number | string;
+  teamName?: string;
 }
 
 interface ServerBoard {
   id: number | string;
   name?: string;
-  title?: string;
   description?: string;
+  taskCount?: number;
 }
 
 interface ServerTask {
   id: number | string;
-  title: string;
+  title?: string;
   description?: string;
   priority?: string;
   status?: string;
-  assignee?: { id: number | string };
+  assignee?: { id: number | string; fullName?: string; email?: string; avatarUrl?: string };
   boardId?: number | string;
+  boardName?: string;
 }
 
 axios.defaults.baseURL = 'http://127.0.0.1:8080/api/v1';
 
-export const fetchUsers = async (signal?: AbortSignal) => {
+// Вспомогательная функция для нормализации статуса
+const normalizeStatusForServer = (status: Task['status']): string => {
+  const statusMap: { [key in Task['status']]: string } = {
+    backlog: 'Backlog',
+    inprogress: 'InProgress',
+    done: 'Done',
+  };
+  return statusMap[status] || 'Backlog'; // По умолчанию Backlog
+};
+
+export const fetchUsers = async (signal?: AbortSignal): Promise<ServerUser[]> => {
   try {
     const response = await axios.get('/users', { signal });
-    console.log('fetchUsers response:', response.data);
     const data = response.data.data || response.data.users || response.data;
     return Array.isArray(data) ? data : [];
   } catch (error) {
@@ -43,10 +57,9 @@ export const fetchUsers = async (signal?: AbortSignal) => {
   }
 };
 
-export const fetchBoards = async () => {
+export const fetchBoards = async (): Promise<ServerBoard[]> => {
   try {
     const response = await axios.get('/boards');
-    console.log('fetchBoards response:', response.data);
     const data = response.data.data || response.data.boards || response.data;
     return Array.isArray(data) ? data : [];
   } catch (error) {
@@ -55,10 +68,9 @@ export const fetchBoards = async () => {
   }
 };
 
-export const fetchTasks = async (signal?: AbortSignal) => {
+export const fetchTasks = async (signal?: AbortSignal): Promise<ServerTask[]> => {
   try {
     const response = await axios.get('/tasks', { signal });
-    console.log('fetchTasks response:', response.data);
     const data = response.data.data || response.data.tasks || response.data;
     return Array.isArray(data) ? data : [];
   } catch (error) {
@@ -71,26 +83,16 @@ export const fetchTasks = async (signal?: AbortSignal) => {
   }
 };
 
-export const fetchBoardWithTasks = async (boardId: string, signal?: AbortSignal) => {
+export const fetchBoardWithTasks = async (boardId: string, signal?: AbortSignal): Promise<{ board: Board | null; tasks: Task[] }> => {
   try {
-    // Запрашиваем задачи для доски
     const tasksResponse = await axios.get(`/boards/${boardId}`, { signal });
-    console.log('fetchBoardWithTasks response:', tasksResponse.data);
-
-    // Запрашиваем информацию о всех досках, чтобы найти нужную
     const boardsResponse = await fetchBoards();
     const boardData = boardsResponse.find((board: ServerBoard) => board.id.toString() === boardId);
-
-    // Извлекаем задачи из ответа
     const tasksData = tasksResponse.data.data || tasksResponse.data.tasks || tasksResponse.data || [];
-    const tasks = Array.isArray(tasksData) ? tasksData.map(mapServerTaskToClient) : [];
-
-    // Маппим данные доски
+    const tasks = Array.isArray(tasksData)
+      ? tasksData.map((serverTask: ServerTask) => mapServerTaskToClient(serverTask))
+      : [];
     const board = boardData ? mapServerBoardToClient(boardData) : { id: boardId, title: `Доска ${boardId}`, description: '' };
-
-    console.log('fetchBoardWithTasks board:', board);
-    console.log('fetchBoardWithTasks tasks:', tasks);
-
     return { board, tasks };
   } catch (error) {
     if (axios.isCancel(error)) {
@@ -102,29 +104,21 @@ export const fetchBoardWithTasks = async (boardId: string, signal?: AbortSignal)
   }
 };
 
-export const createTask = async (task: Omit<Task, 'id'>) => {
+export const createTask = async (task: Omit<Task, 'id'>): Promise<any> => {
   try {
     const assigneeId = parseInt(task.assignee);
-    if (!assigneeId || assigneeId <= 0) {
-      throw new Error('Assignee ID must be a positive number');
-    }
     const boardId = parseInt(task.boardId);
-    if (!boardId || boardId <= 0) {
-      throw new Error('Board ID must be a positive number');
-    }
-    const status = task.status === 'backlog' ? 'Backlog' :
-                   task.status === 'inprogress' ? 'InProgress' : 'Done';
+    const status = normalizeStatusForServer(task.status); // Используем нормализацию
+    const priority = task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
     const payload = {
       assigneeId,
       boardId,
       description: task.description,
-      priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
+      priority,
       status,
       title: task.title,
     };
-    console.log('createTask payload:', payload);
     const response = await axios.post('/tasks/create', payload);
-    console.log('createTask response:', response.data);
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError;
@@ -133,105 +127,92 @@ export const createTask = async (task: Omit<Task, 'id'>) => {
   }
 };
 
-export const updateTask = async (task: Task) => {
+export const updateTask = async (task: Task): Promise<any> => {
   try {
     const assigneeId = parseInt(task.assignee);
-    if (!assigneeId || assigneeId <= 0) {
-      throw new Error('Assignee ID must be a positive number');
-    }
     const boardId = parseInt(task.boardId);
-    if (!boardId || boardId <= 0) {
-      throw new Error('Board ID must be a positive number');
-    }
-    const status = task.status === 'backlog' ? 'Backlog' :
-                   task.status === 'inprogress' ? 'InProgress' : 'Done';
+    const status = normalizeStatusForServer(task.status); // Используем нормализацию
+    const priority = task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
     const payload = {
       assigneeId,
       description: task.description,
-      priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
+      priority,
       status,
       title: task.title,
     };
-    console.log('updateTask payload:', payload);
     const response = await axios.put(`/tasks/update/${task.id}`, payload);
-    console.log('updateTask response:', response.data);
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError;
-    console.error('updateTask error details:', axiosError.message, axiosError.response?.data);
+    console.error('updateTask error:', axiosError.message, axiosError.response?.data);
     throw error;
   }
 };
 
-export const updateTaskStatus = async (taskId: string, status: Task['status']) => {
+export const updateTaskStatus = async (taskId: string, status: Task['status']): Promise<any> => {
   try {
-    const formattedStatus = status === 'backlog' ? 'Backlog' :
-                           status === 'inprogress' ? 'InProgress' : 'Done';
-    const payload = {
-      status: formattedStatus,
-    };
-    console.log('updateTaskStatus payload:', payload);
+    const formattedStatus = normalizeStatusForServer(status); // Используем нормализацию
+    const payload = { status: formattedStatus };
     const response = await axios.put(`/tasks/updateStatus/${taskId}`, payload);
-    console.log('updateTaskStatus response:', response.data);
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError;
-    console.error('updateTaskStatus error details:', axiosError.message, axiosError.response?.data);
+    console.error('updateTaskStatus error:', axiosError.message, axiosError.response?.data);
     throw error;
   }
 };
 
-export const mapServerUserToClient = (serverUser: ServerUser) => ({
+export const mapServerUserToClient = (serverUser: ServerUser): User => ({
   id: serverUser.id?.toString() || '',
-  name: serverUser.fullName || serverUser.name || serverUser.username || '',
+  name: serverUser.fullName || '',
+  email: serverUser.email || '',
+  avatarUrl: serverUser.avatarUrl || '',
+  description: serverUser.description || '',
+  tasksCount: serverUser.tasksCount || 0,
+  teamId: serverUser.teamId?.toString() || '',
+  teamName: serverUser.teamName || '',
 });
 
-export const mapServerBoardToClient = (serverBoard: ServerBoard) => ({
+export const mapServerBoardToClient = (serverBoard: ServerBoard): Board => ({
   id: serverBoard.id?.toString() || '',
-  title: serverBoard.name || serverBoard.title || 'Без названия',
+  title: serverBoard.name || 'Без названия',
   description: serverBoard.description || '',
+  taskCount: serverBoard.taskCount || 0,
 });
 
 export const mapServerTaskToClient = (serverTask: ServerTask): Task => {
-  const normalizeStatus = (status: string): Task['status'] => {
-    console.log('Raw task status:', status);
+  const normalizeStatus = (status?: string): Task['status'] => {
     const statusMap: { [key: string]: Task['status'] } = {
-      done: 'done',
-      inprogress: 'inprogress',
-      backlog: 'backlog',
       Done: 'done',
       InProgress: 'inprogress',
       Backlog: 'backlog',
-      DONE: 'done',
-      INPROGRESS: 'inprogress',
-      BACKLOG: 'backlog',
+      done: 'done',
+      inprogress: 'inprogress',
+      backlog: 'backlog',
     };
-    return statusMap[status] || 'backlog';
+    return status ? statusMap[status] || 'backlog' : 'backlog';
   };
 
-  const normalizePriority = (priority: string): Task['priority'] => {
-    console.log('Raw task priority:', priority);
+  const normalizePriority = (priority?: string): Task['priority'] => {
     const priorityMap: { [key: string]: Task['priority'] } = {
-      low: 'low',
-      medium: 'medium',
-      high: 'high',
       Low: 'low',
       Medium: 'medium',
       High: 'high',
-      LOW: 'low',
-      MEDIUM: 'medium',
-      HIGH: 'high',
+      low: 'low',
+      medium: 'medium',
+      high: 'high',
     };
-    return priorityMap[priority] || 'medium';
+    return priority ? priorityMap[priority] || 'medium' : 'medium';
   };
 
   return {
     id: serverTask.id?.toString() || '',
     title: serverTask.title || '',
     description: serverTask.description || '',
-    priority: serverTask.priority ? normalizePriority(serverTask.priority) : 'medium',
-    status: serverTask.status ? normalizeStatus(serverTask.status) : 'backlog',
+    priority: normalizePriority(serverTask.priority),
+    status: normalizeStatus(serverTask.status),
     assignee: serverTask.assignee?.id?.toString() || '',
     boardId: serverTask.boardId?.toString() || '',
+    boardName: serverTask.boardName || '',
   };
 };

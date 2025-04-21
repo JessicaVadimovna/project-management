@@ -1,34 +1,23 @@
-import { useEffect } from 'react';
+// App.tsx
 import { Routes, Route } from 'react-router-dom';
-import { useAppSelector, useAppDispatch } from './store/hooks';
-import { setUsers } from './store/usersSlice';
+import { Provider } from 'react-redux';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Header from './components/Header';
-import IssuesPage from './pages/IssuesPage';
 import BoardsPage from './pages/BoardsPage';
+import IssuesPage from './pages/IssuesPage';
 import BoardPage from './pages/BoardPage';
 import TaskModal from './components/TaskModal';
-import { useQuery } from '@tanstack/react-query';
-import { fetchUsers, mapServerUserToClient } from './api/api';
+import { store } from './store';
+import { useAppSelector } from './store/hooks';
+import { RootState } from './store';
 import './App.css';
 
-function App() {
-  const dispatch = useAppDispatch();
+const queryClient = new QueryClient();
+
+function AppContent() {
   const { isOpen, taskId, initialValues, redirectToBoard, isCreatingFromBoard } = useAppSelector(
-    state => state.modal
+    (state: RootState) => state.modal
   );
-
-  const { data: serverUsers, isLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: ({ signal }) => fetchUsers(signal),
-  });
-
-  useEffect(() => {
-    if (serverUsers && Array.isArray(serverUsers)) {
-      dispatch(setUsers(serverUsers.map(mapServerUserToClient)));
-    }
-  }, [serverUsers, dispatch]);
-
-  if (isLoading) return <div>Загрузка...</div>;
 
   return (
     <div className="app">
@@ -49,6 +38,16 @@ function App() {
         isCreatingFromBoard={isCreatingFromBoard}
       />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Provider store={store}>
+      <QueryClientProvider client={queryClient}>
+        <AppContent />
+      </QueryClientProvider>
+    </Provider>
   );
 }
 
