@@ -6,7 +6,14 @@ import { setBoards } from '../store/boardsSlice';
 import { setUsers } from '../store/usersSlice';
 import { openModal } from '../store/modalSlice';
 import { useQuery } from '@tanstack/react-query';
-import { fetchTasks, fetchBoards, fetchUsers, mapServerTaskToClient, mapServerBoardToClient, mapServerUserToClient } from '../api/api';
+import {
+  fetchTasks,
+  fetchBoards,
+  fetchUsers,
+  mapServerTaskToClient,
+  mapServerBoardToClient,
+  mapServerUserToClient,
+} from '../api/api';
 import { Task, User, Board } from '../types/types';
 // Импорт useNavigate оставляем для будущего использования
 // import { useNavigate } from 'react-router-dom';
@@ -22,9 +29,9 @@ const IssuesPage = () => {
   // const navigate = useNavigate();
   // QueryClient также оставляем для будущего использования
 
-  const tasks = useAppSelector((state) => state.tasks.tasks) as Task[];
-  const boards = useAppSelector((state) => state.boards.boards) as Board[];
-  const users = useAppSelector((state) => state.users.users) as User[];
+  const tasks = useAppSelector(state => state.tasks.tasks) as Task[];
+  const boards = useAppSelector(state => state.boards.boards) as Board[];
+  const users = useAppSelector(state => state.users.users) as User[];
 
   const [filters, setFilters] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
@@ -71,14 +78,15 @@ const IssuesPage = () => {
     }
   }, [serverBoards, dispatch]);
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesStatus = filters.some((f) => f.startsWith('status:'))
-      ? filters.some((f) => f === `status:${task.status}`)
+  const filteredTasks = tasks.filter(task => {
+    const matchesStatus = filters.some(f => f.startsWith('status:'))
+      ? filters.some(f => f === `status:${task.status}`)
       : true;
-    const matchesBoard = filters.some((f) => f.startsWith('board:'))
-      ? filters.some((f) => f === `board:${task.boardId}`)
+    const matchesBoard = filters.some(f => f.startsWith('board:'))
+      ? filters.some(f => f === `board:${task.boardId}`)
       : true;
-    const assigneeName = users.find((user) => user.id === task.assignee)?.name || '';
+    const assigneeName =
+      users.find(user => user.id === task.assignee)?.name || '';
     const matchesSearch =
       task.title.toLowerCase().includes(searchText.toLowerCase()) ||
       assigneeName.toLowerCase().includes(searchText.toLowerCase());
@@ -198,7 +206,7 @@ const IssuesPage = () => {
               <Option value="status:done">Завершено</Option>
             </OptGroup>
             <OptGroup label="Доски">
-              {boards.map((board) => (
+              {boards.map(board => (
                 <Option key={`board:${board.id}`} value={`board:${board.id}`}>
                   {board.title}
                 </Option>
@@ -211,22 +219,29 @@ const IssuesPage = () => {
         dataSource={filteredTasks}
         columns={columns}
         rowKey="id"
-        onRow={(record) => ({ onClick: () => handleRowClick(record), style: { cursor: 'pointer' } })}
+        onRow={record => ({
+          onClick: () => handleRowClick(record),
+          style: { cursor: 'pointer' },
+        })}
         className="issues-table"
         pagination={
           isMobile
             ? {
-              current: currentPage,
-              pageSize,
-              total: filteredTasks.length,
-              onChange: (page) => setCurrentPage(page),
-              showSizeChanger: false,
-            }
+                current: currentPage,
+                pageSize,
+                total: filteredTasks.length,
+                onChange: page => setCurrentPage(page),
+                showSizeChanger: false,
+              }
             : false
         }
       />
       <div className="bottom-create-task">
-        <Button type="primary" onClick={handleCreateTask} className="create-task-button">
+        <Button
+          type="primary"
+          onClick={handleCreateTask}
+          className="create-task-button"
+        >
           Создать задачу
         </Button>
       </div>

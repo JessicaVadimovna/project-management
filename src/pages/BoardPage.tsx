@@ -6,8 +6,20 @@ import { setUsers } from '../store/usersSlice';
 import { setBoards } from '../store/boardsSlice';
 import { openModal } from '../store/modalSlice';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchBoardWithTasks, updateTaskStatus, fetchUsers, fetchBoards, mapServerUserToClient, mapServerBoardToClient } from '../api/api'; // Добавляем fetchBoards
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import {
+  fetchBoardWithTasks,
+  updateTaskStatus,
+  fetchUsers,
+  fetchBoards,
+  mapServerUserToClient,
+  mapServerBoardToClient,
+} from '../api/api'; // Добавляем fetchBoards
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from '@hello-pangea/dnd';
 import { Card, Row, Col, message } from 'antd';
 import { Task, User } from '../types/types';
 import './BoardPage.css';
@@ -27,13 +39,21 @@ const BoardPage = () => {
   });
 
   // Запрос для загрузки пользователей
-  const { data: serverUsers, isLoading: isUsersLoading, error: usersError } = useQuery({
+  const {
+    data: serverUsers,
+    isLoading: isUsersLoading,
+    error: usersError,
+  } = useQuery({
     queryKey: ['users'],
     queryFn: ({ signal }) => fetchUsers(signal),
   });
 
   // Запрос для загрузки списка досок
-  const { data: serverBoards, isLoading: isBoardsLoading, error: boardsError } = useQuery({
+  const {
+    data: serverBoards,
+    isLoading: isBoardsLoading,
+    error: boardsError,
+  } = useQuery({
     queryKey: ['boards'],
     queryFn: ({ signal }) => fetchBoards(signal),
   });
@@ -71,22 +91,29 @@ const BoardPage = () => {
     if (location.state?.openTaskId) {
       const task = tasks.find((t: Task) => t.id === location.state.openTaskId);
       if (task && task.boardId === id) {
-        dispatch(openModal({
-          taskId: task.id,
-          initialValues: {
-            ...task,
-            boardId: task.boardId || id,
-            boardName: task.boardName || data?.board?.title || `Доска ${id}`,
-          },
-          redirectToBoard: id,
-        }));
+        dispatch(
+          openModal({
+            taskId: task.id,
+            initialValues: {
+              ...task,
+              boardId: task.boardId || id,
+              boardName: task.boardName || data?.board?.title || `Доска ${id}`,
+            },
+            redirectToBoard: id,
+          })
+        );
       }
     }
   }, [location.state, tasks, dispatch, id, data]);
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ taskId, status }: { taskId: string; status: Task['status'] }) =>
-      updateTaskStatus(taskId, status),
+    mutationFn: ({
+      taskId,
+      status,
+    }: {
+      taskId: string;
+      status: Task['status'];
+    }) => updateTaskStatus(taskId, status),
     onSuccess: () => {
       message.success('Статус задачи обновлен', 3);
       queryClient.invalidateQueries({ queryKey: ['boardWithTasks', id] });
@@ -102,35 +129,43 @@ const BoardPage = () => {
     const taskId = result.draggableId;
     const newStatus = result.destination.droppableId as Task['status'];
 
-    dispatch(setTasks(tasks.map((task: Task) =>
-      task.id === taskId ? { ...task, status: newStatus } : task
-    )));
+    dispatch(
+      setTasks(
+        tasks.map((task: Task) =>
+          task.id === taskId ? { ...task, status: newStatus } : task
+        )
+      )
+    );
 
     updateStatusMutation.mutate({ taskId, status: newStatus });
   };
 
   const handleTaskClick = (task: Task) => {
-    dispatch(openModal({
-      taskId: task.id,
-      initialValues: {
-        ...task,
-        boardId: task.boardId || id,
-        boardName: task.boardName || data?.board?.title || `Доска ${id}`,
-      },
-      redirectToBoard: id,
-    }));
+    dispatch(
+      openModal({
+        taskId: task.id,
+        initialValues: {
+          ...task,
+          boardId: task.boardId || id,
+          boardName: task.boardName || data?.board?.title || `Доска ${id}`,
+        },
+        redirectToBoard: id,
+      })
+    );
   };
 
-  const handleCreateTask = () => {
-    dispatch(openModal({
-      initialValues: {
-        boardId: id,
-        boardName: data?.board?.title || `Доска ${id}`,
-      },
-      isCreatingFromBoard: true,
-      redirectToBoard: id,
-    }));
-  };
+  // const handleCreateTask = () => {
+  //   dispatch(
+  //     openModal({
+  //       initialValues: {
+  //         boardId: id,
+  //         boardName: data?.board?.title || `Доска ${id}`,
+  //       },
+  //       isCreatingFromBoard: true,
+  //       redirectToBoard: id,
+  //     })
+  //   );
+  // };
 
   const getAssigneeName = (assigneeId: string) => {
     const user = users.find((user: User) => user.id === assigneeId);
@@ -138,8 +173,17 @@ const BoardPage = () => {
     return user ? user.name : 'Не назначен';
   };
 
-  if (isLoading || isUsersLoading || isBoardsLoading) return <div className="loading">Загрузка...</div>;
-  if (error || usersError || boardsError) return <div className="error">Ошибка: {(error as Error)?.message || (usersError as Error)?.message || (boardsError as Error)?.message}</div>;
+  if (isLoading || isUsersLoading || isBoardsLoading)
+    return <div className="loading">Загрузка...</div>;
+  if (error || usersError || boardsError)
+    return (
+      <div className="error">
+        Ошибка:{' '}
+        {(error as Error)?.message ||
+          (usersError as Error)?.message ||
+          (boardsError as Error)?.message}
+      </div>
+    );
 
   const { board, tasks: boardTasks } = data || { board: null, tasks: [] };
 
@@ -163,15 +207,26 @@ const BoardPage = () => {
               {(['backlog', 'inprogress', 'done'] as const).map(status => (
                 <Col xs={24} sm={12} md={8} key={status}>
                   <Droppable droppableId={status}>
-                    {(provided) => (
-                      <div className="column" {...provided.droppableProps} ref={provided.innerRef}>
+                    {provided => (
+                      <div
+                        className="column"
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                      >
                         <h2>
-                          {status === 'backlog' ? 'Бэклог' :
-                            status === 'inprogress' ? 'В процессе' : 'Завершено'}
+                          {status === 'backlog'
+                            ? 'Бэклог'
+                            : status === 'inprogress'
+                              ? 'В процессе'
+                              : 'Завершено'}
                         </h2>
                         {columns[status].map((task: Task, index: number) => (
-                          <Draggable key={task.id} draggableId={task.id} index={index}>
-                            {(provided) => (
+                          <Draggable
+                            key={task.id}
+                            draggableId={task.id}
+                            index={index}
+                          >
+                            {provided => (
                               <Card
                                 title={task.title}
                                 hoverable
@@ -182,11 +237,17 @@ const BoardPage = () => {
                                 className="task-card"
                               >
                                 <p>{task.description || 'Нет описания'}</p>
-                                <p>Приоритет: {
-                                  task.priority === 'low' ? 'Низкий' :
-                                    task.priority === 'medium' ? 'Средний' : 'Высокий'
-                                }</p>
-                                <p>Исполнитель: {getAssigneeName(task.assignee)}</p>
+                                <p>
+                                  Приоритет:{' '}
+                                  {task.priority === 'low'
+                                    ? 'Низкий'
+                                    : task.priority === 'medium'
+                                      ? 'Средний'
+                                      : 'Высокий'}
+                                </p>
+                                <p>
+                                  Исполнитель: {getAssigneeName(task.assignee)}
+                                </p>
                               </Card>
                             )}
                           </Draggable>

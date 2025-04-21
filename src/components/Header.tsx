@@ -18,7 +18,11 @@ const Header = () => {
           <Link to="/issues">Все задачи</Link>
           <Link to="/boards">Проекты</Link>
         </div>
-        <Button type="primary" onClick={handleCreateTask} className="create-task-btn">
+        <Button
+          type="primary"
+          onClick={handleCreateTask}
+          className="create-task-btn"
+        >
           Создать задачу
         </Button>
       </nav>

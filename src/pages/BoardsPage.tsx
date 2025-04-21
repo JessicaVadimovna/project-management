@@ -4,16 +4,20 @@ import { setBoards } from '../store/boardsSlice';
 import { useQuery } from '@tanstack/react-query';
 import { fetchBoards, mapServerBoardToClient } from '../api/api';
 import { Board } from '../types/types';
-import './BoardsPage.css';
 import { Link } from 'react-router-dom';
+import './BoardsPage.css';
 
 const BoardsPage = () => {
   const dispatch = useAppDispatch();
   const boards = useAppSelector(state => state.boards.boards) as Board[];
 
-  const { data: serverBoards, isLoading, error } = useQuery({
+  const {
+    data: serverBoards,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['boards'],
-    queryFn: fetchBoards,
+    queryFn: ({ signal }) => fetchBoards(signal),
   });
 
   useEffect(() => {
@@ -32,7 +36,7 @@ const BoardsPage = () => {
         <div>Доски отсутствуют</div>
       ) : (
         <div className="boards-list">
-          {boards.map((board) => (
+          {boards.map(board => (
             <div className="board-item" key={board.id}>
               <span className="board-title">{board.title}</span>
               <Link to={`/board/${board.id}`}>

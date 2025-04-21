@@ -25,9 +25,24 @@ interface ServerTask {
   description?: string;
   priority?: string;
   status?: string;
-  assignee?: { id: number | string; fullName?: string; email?: string; avatarUrl?: string };
+  assignee?: {
+    id: number | string;
+    fullName?: string;
+    email?: string;
+    avatarUrl?: string;
+  };
   boardId?: number | string;
   boardName?: string;
+}
+
+interface TaskResponse {
+  id: string;
+  title: string;
+  description?: string;
+  priority: string;
+  status: string;
+  assigneeId?: string | number;
+  boardId?: string | number;
 }
 
 axios.defaults.baseURL = 'http://127.0.0.1:8080/api/v1';
@@ -39,10 +54,12 @@ const normalizeStatusForServer = (status: Task['status']): string => {
     inprogress: 'InProgress',
     done: 'Done',
   };
-  return statusMap[status] || 'Backlog'; // По умолчанию Backlog
+  return statusMap[status] || 'Backlog';
 };
 
-export const fetchUsers = async (signal?: AbortSignal): Promise<ServerUser[]> => {
+export const fetchUsers = async (
+  signal?: AbortSignal
+): Promise<ServerUser[]> => {
   try {
     const response = await axios.get('/users', { signal });
     const data = response.data.data || response.data.users || response.data;
@@ -57,9 +74,11 @@ export const fetchUsers = async (signal?: AbortSignal): Promise<ServerUser[]> =>
   }
 };
 
-export const fetchBoards = async (): Promise<ServerBoard[]> => {
+export const fetchBoards = async (
+  signal?: AbortSignal
+): Promise<ServerBoard[]> => {
   try {
-    const response = await axios.get('/boards');
+    const response = await axios.get('/boards', { signal });
     const data = response.data.data || response.data.boards || response.data;
     return Array.isArray(data) ? data : [];
   } catch (error) {
@@ -68,7 +87,9 @@ export const fetchBoards = async (): Promise<ServerBoard[]> => {
   }
 };
 
-export const fetchTasks = async (signal?: AbortSignal): Promise<ServerTask[]> => {
+export const fetchTasks = async (
+  signal?: AbortSignal
+): Promise<ServerTask[]> => {
   try {
     const response = await axios.get('/tasks', { signal });
     const data = response.data.data || response.data.tasks || response.data;
@@ -83,16 +104,29 @@ export const fetchTasks = async (signal?: AbortSignal): Promise<ServerTask[]> =>
   }
 };
 
-export const fetchBoardWithTasks = async (boardId: string, signal?: AbortSignal): Promise<{ board: Board | null; tasks: Task[] }> => {
+export const fetchBoardWithTasks = async (
+  boardId: string,
+  signal?: AbortSignal
+): Promise<{ board: Board | null; tasks: Task[] }> => {
   try {
     const tasksResponse = await axios.get(`/boards/${boardId}`, { signal });
-    const boardsResponse = await fetchBoards();
-    const boardData = boardsResponse.find((board: ServerBoard) => board.id.toString() === boardId);
-    const tasksData = tasksResponse.data.data || tasksResponse.data.tasks || tasksResponse.data || [];
+    const boardsResponse = await fetchBoards(signal);
+    const boardData = boardsResponse.find(
+      (board: ServerBoard) => board.id.toString() === boardId
+    );
+    const tasksData =
+      tasksResponse.data.data ||
+      tasksResponse.data.tasks ||
+      tasksResponse.data ||
+      [];
     const tasks = Array.isArray(tasksData)
-      ? tasksData.map((serverTask: ServerTask) => mapServerTaskToClient(serverTask))
+      ? tasksData.map((serverTask: ServerTask) =>
+          mapServerTaskToClient(serverTask)
+        )
       : [];
-    const board = boardData ? mapServerBoardToClient(boardData) : { id: boardId, title: `Доска ${boardId}`, description: '' };
+    const board = boardData
+      ? mapServerBoardToClient(boardData)
+      : { id: boardId, title: `Доска ${boardId}`, description: '' };
     return { board, tasks };
   } catch (error) {
     if (axios.isCancel(error)) {
@@ -104,12 +138,15 @@ export const fetchBoardWithTasks = async (boardId: string, signal?: AbortSignal)
   }
 };
 
-export const createTask = async (task: Omit<Task, 'id'>): Promise<any> => {
+export const createTask = async (
+  task: Omit<Task, 'id'>
+): Promise<TaskResponse> => {
   try {
     const assigneeId = parseInt(task.assignee);
     const boardId = parseInt(task.boardId);
-    const status = normalizeStatusForServer(task.status); // Используем нормализацию
-    const priority = task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
+    const status = normalizeStatusForServer(task.status);
+    const priority =
+      task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
     const payload = {
       assigneeId,
       boardId,
@@ -119,20 +156,25 @@ export const createTask = async (task: Omit<Task, 'id'>): Promise<any> => {
       title: task.title,
     };
     const response = await axios.post('/tasks/create', payload);
-    return response.data;
+    return response.data as TaskResponse;
   } catch (error) {
     const axiosError = error as AxiosError;
-    console.error('createTask error:', axiosError.message, axiosError.response?.data);
+    console.error(
+      'createTask error:',
+      axiosError.message,
+      axiosError.response?.data
+    );
     throw error;
   }
 };
 
-export const updateTask = async (task: Task): Promise<any> => {
+export const updateTask = async (task: Task): Promise<TaskResponse> => {
   try {
     const assigneeId = parseInt(task.assignee);
     const boardId = parseInt(task.boardId);
-    const status = normalizeStatusForServer(task.status); // Используем нормализацию
-    const priority = task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
+    const status = normalizeStatusForServer(task.status);
+    const priority =
+      task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
     const payload = {
       assigneeId,
       description: task.description,
@@ -141,23 +183,34 @@ export const updateTask = async (task: Task): Promise<any> => {
       title: task.title,
     };
     const response = await axios.put(`/tasks/update/${task.id}`, payload);
-    return response.data;
+    return response.data as TaskResponse;
   } catch (error) {
     const axiosError = error as AxiosError;
-    console.error('updateTask error:', axiosError.message, axiosError.response?.data);
+    console.error(
+      'updateTask error:',
+      axiosError.message,
+      axiosError.response?.data
+    );
     throw error;
   }
 };
 
-export const updateTaskStatus = async (taskId: string, status: Task['status']): Promise<any> => {
+export const updateTaskStatus = async (
+  taskId: string,
+  status: Task['status']
+): Promise<TaskResponse> => {
   try {
-    const formattedStatus = normalizeStatusForServer(status); // Используем нормализацию
+    const formattedStatus = normalizeStatusForServer(status);
     const payload = { status: formattedStatus };
     const response = await axios.put(`/tasks/updateStatus/${taskId}`, payload);
-    return response.data;
+    return response.data as TaskResponse;
   } catch (error) {
     const axiosError = error as AxiosError;
-    console.error('updateTaskStatus error:', axiosError.message, axiosError.response?.data);
+    console.error(
+      'updateTaskStatus error:',
+      axiosError.message,
+      axiosError.response?.data
+    );
     throw error;
   }
 };

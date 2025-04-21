@@ -7,17 +7,29 @@ import IssuesPage from './pages/IssuesPage';
 import BoardPage from './pages/BoardPage';
 import TaskModal from './components/TaskModal';
 import { store } from './store';
-// import { useAppInitialization } from './hooks/useAppInitialization';
 import { useAppSelector } from './store/hooks';
 import { RootState } from './store';
+import { Task } from './types/types';
 import './App.css';
 
 const queryClient = new QueryClient();
 
+interface ModalState {
+  isOpen: boolean;
+  taskId: string | null;
+  initialValues: Partial<Task>;
+  redirectToBoard: string | null;
+  isCreatingFromBoard: boolean;
+}
+
 function AppContent() {
-  const { isOpen, taskId, initialValues, redirectToBoard, isCreatingFromBoard } = useAppSelector(
-    (state: RootState) => state.modal
-  );
+  const {
+    isOpen,
+    taskId,
+    initialValues,
+    redirectToBoard,
+    isCreatingFromBoard,
+  } = useAppSelector((state: RootState) => state.modal) as ModalState;
 
   return (
     <div className="app">
@@ -42,8 +54,6 @@ function AppContent() {
 }
 
 function App() {
-  // Инициализация данных
-  // useAppInitialization();
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>

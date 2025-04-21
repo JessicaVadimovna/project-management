@@ -24,7 +24,7 @@ export const modalSlice = createSlice({
       state.redirectToBoard = action.payload.redirectToBoard;
       state.isCreatingFromBoard = action.payload.isCreatingFromBoard;
     },
-    closeModal: (state) => {
+    closeModal: state => {
       state.isOpen = false;
       state.taskId = undefined;
       state.initialValues = undefined;

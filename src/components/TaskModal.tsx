@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useMutation, useQueryClient, MutationFunction } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  MutationFunction,
+} from '@tanstack/react-query';
 import { Modal, Form, Input, Select, Button, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { RootState } from '../store';
@@ -14,7 +18,9 @@ const { Option } = Select;
 interface TaskModalProps {
   visible: boolean;
   taskId: string | null;
-  initialValues: Partial<Omit<Task, 'id'>> & { boardName?: string } | undefined;
+  initialValues:
+    | (Partial<Omit<Task, 'id'>> & { boardName?: string })
+    | undefined;
   redirectToBoard: string | null;
   isCreatingFromBoard: boolean;
 }
@@ -31,12 +37,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
 
-  const boards = useSelector((state: RootState) => state.boards.boards) as Board[];
+  const boards = useSelector(
+    (state: RootState) => state.boards.boards
+  ) as Board[];
   const users = useSelector((state: RootState) => state.users.users) as User[];
   const tasks = useSelector((state: RootState) => state.tasks.tasks) as Task[];
 
   const isEditing = !!taskId;
-  const openedFrom = redirectToBoard || isCreatingFromBoard ? 'board' : 'allTasks';
+  const openedFrom =
+    redirectToBoard || isCreatingFromBoard ? 'board' : 'allTasks';
 
   // Восстанавливаем черновик при открытии модального окна
   useEffect(() => {
@@ -51,13 +60,22 @@ const TaskModal: React.FC<TaskModalProps> = ({
             priority: draftValues.priority || 'medium',
             status: draftValues.status || 'backlog',
             assignee: draftValues.assignee || '',
-            boardId: draftValues.boardId ? {
-              key: draftValues.boardId,
-              label: boards.find(b => b.id === draftValues.boardId)?.title || 'Не указана'
-            } : initialValues.boardId ? {
-              key: initialValues.boardId,
-              label: initialValues.boardName || boards.find(b => b.id === initialValues.boardId)?.title || 'Не указана'
-            } : undefined,
+            boardId: draftValues.boardId
+              ? {
+                  key: draftValues.boardId,
+                  label:
+                    boards.find(b => b.id === draftValues.boardId)?.title ||
+                    'Не указана',
+                }
+              : initialValues.boardId
+                ? {
+                    key: initialValues.boardId,
+                    label:
+                      initialValues.boardName ||
+                      boards.find(b => b.id === initialValues.boardId)?.title ||
+                      'Не указана',
+                  }
+                : undefined,
           });
         } else {
           form.setFieldsValue({
@@ -66,10 +84,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
             priority: initialValues.priority || 'medium',
             status: initialValues.status || 'backlog',
             assignee: initialValues.assignee || '',
-            boardId: initialValues.boardId ? {
-              key: initialValues.boardId,
-              label: initialValues.boardName || boards.find(b => b.id === initialValues.boardId)?.title || 'Не указана'
-            } : undefined,
+            boardId: initialValues.boardId
+              ? {
+                  key: initialValues.boardId,
+                  label:
+                    initialValues.boardName ||
+                    boards.find(b => b.id === initialValues.boardId)?.title ||
+                    'Не указана',
+                }
+              : undefined,
           });
         }
       } else {
@@ -79,10 +102,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
           priority: initialValues.priority || 'medium',
           status: initialValues.status || 'backlog',
           assignee: initialValues.assignee || '',
-          boardId: initialValues.boardId ? {
-            key: initialValues.boardId,
-            label: initialValues.boardName || boards.find(b => b.id === initialValues.boardId)?.title || 'Не указана'
-          } : undefined,
+          boardId: initialValues.boardId
+            ? {
+                key: initialValues.boardId,
+                label:
+                  initialValues.boardName ||
+                  boards.find(b => b.id === initialValues.boardId)?.title ||
+                  'Не указана',
+              }
+            : undefined,
         });
       }
     }
@@ -92,14 +120,17 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const handleFieldsChange = () => {
     if (!isEditing) {
       const values = form.getFieldsValue();
-      localStorage.setItem('taskDraft', JSON.stringify({
-        title: values.title,
-        description: values.description,
-        priority: values.priority,
-        status: values.status,
-        assignee: values.assignee,
-        boardId: values.boardId?.key || values.boardId,
-      }));
+      localStorage.setItem(
+        'taskDraft',
+        JSON.stringify({
+          title: values.title,
+          description: values.description,
+          priority: values.priority,
+          status: values.status,
+          assignee: values.assignee,
+          boardId: values.boardId?.key || values.boardId,
+        })
+      );
     }
   };
 
@@ -107,9 +138,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
     mutationFn: createTask as MutationFunction<Task, Omit<Task, 'id'>>,
     onSuccess: (data, variables) => {
       message.success('Задача создана', 3);
-      queryClient.invalidateQueries({ queryKey: ['boardWithTasks', redirectToBoard] });
+      queryClient.invalidateQueries({
+        queryKey: ['boardWithTasks', redirectToBoard],
+      });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      const newTask = { ...variables, id: data.id?.toString() || Date.now().toString() };
+      const newTask = {
+        ...variables,
+        id: data.id?.toString() || Date.now().toString(),
+      };
       dispatch(setTasks([...tasks, newTask]));
       localStorage.removeItem('taskDraft');
       handleCancel();
@@ -126,9 +162,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
     onSuccess: () => {
       message.success('Задача обновлена', 3);
       const updatedTask = { ...form.getFieldsValue(), id: taskId };
-      dispatch(setTasks(tasks.map((task: Task) => (task.id === taskId ? updatedTask : task))));
+      dispatch(
+        setTasks(
+          tasks.map((task: Task) => (task.id === taskId ? updatedTask : task))
+        )
+      );
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['boardWithTasks', redirectToBoard] });
+      queryClient.invalidateQueries({
+        queryKey: ['boardWithTasks', redirectToBoard],
+      });
       handleCancel();
     },
     onError: (error: Error) => {
@@ -142,9 +184,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
     mutationFn: updateTask as MutationFunction<Task, Task>,
     onSuccess: () => {
       const updatedTask = { ...form.getFieldsValue(), id: taskId };
-      dispatch(setTasks(tasks.map((task: Task) => (task.id === taskId ? updatedTask : task))));
+      dispatch(
+        setTasks(
+          tasks.map((task: Task) => (task.id === taskId ? updatedTask : task))
+        )
+      );
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['boardWithTasks', redirectToBoard] });
+      queryClient.invalidateQueries({
+        queryKey: ['boardWithTasks', redirectToBoard],
+      });
     },
     onError: (error: Error) => {
       message.error('Не удалось обновить задачу', 3);
@@ -153,25 +201,28 @@ const TaskModal: React.FC<TaskModalProps> = ({
   });
 
   const handleOk = () => {
-    form.validateFields().then(values => {
-      const taskData: Task = {
-        id: taskId || '',
-        title: values.title,
-        description: values.description,
-        priority: values.priority,
-        status: values.status,
-        assignee: values.assignee,
-        boardId: values.boardId?.key || values.boardId,
-      };
+    form
+      .validateFields()
+      .then(values => {
+        const taskData: Task = {
+          id: taskId || '',
+          title: values.title,
+          description: values.description,
+          priority: values.priority,
+          status: values.status,
+          assignee: values.assignee,
+          boardId: values.boardId?.key || values.boardId,
+        };
 
-      if (isEditing) {
-        updateTaskMutation.mutate(taskData);
-      } else {
-        createTaskMutation.mutate(taskData);
-      }
-    }).catch(info => {
-      console.log('Validate Failed:', info);
-    });
+        if (isEditing) {
+          updateTaskMutation.mutate(taskData);
+        } else {
+          createTaskMutation.mutate(taskData);
+        }
+      })
+      .catch(info => {
+        console.log('Validate Failed:', info);
+      });
   };
 
   const handleCancel = () => {
@@ -180,21 +231,24 @@ const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const handleGoToBoard = () => {
-    form.validateFields().then(values => {
-      const taskData: Task = {
-        id: taskId || '',
-        title: values.title,
-        description: values.description,
-        priority: values.priority,
-        status: values.status,
-        assignee: values.assignee,
-        boardId: values.boardId?.key || values.boardId,
-      };
-      updateTaskForNavigationMutation.mutate(taskData);
-      navigate(`/board/${values.boardId?.key || values.boardId}`);
-    }).catch(info => {
-      console.log('Validate Failed:', info);
-    });
+    form
+      .validateFields()
+      .then(values => {
+        const taskData: Task = {
+          id: taskId || '',
+          title: values.title,
+          description: values.description,
+          priority: values.priority,
+          status: values.status,
+          assignee: values.assignee,
+          boardId: values.boardId?.key || values.boardId,
+        };
+        updateTaskForNavigationMutation.mutate(taskData);
+        navigate(`/board/${values.boardId?.key || values.boardId}`);
+      })
+      .catch(info => {
+        console.log('Validate Failed:', info);
+      });
   };
 
   const getFooterButtons = () => {
@@ -254,7 +308,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
             labelInValue
           >
             {boards.map(board => (
-              <Option key={board.id} value={board.id}>{board.title}</Option>
+              <Option key={board.id} value={board.id}>
+                {board.title}
+              </Option>
             ))}
           </Select>
         </Form.Item>
@@ -287,7 +343,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
         >
           <Select placeholder="Выберите исполнителя">
             {users.map(user => (
-              <Option key={user.id} value={user.id}>{user.name}</Option>
+              <Option key={user.id} value={user.id}>
+                {user.name}
+              </Option>
             ))}
           </Select>
         </Form.Item>
