@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "module": "ESNext",
     "moduleResolution": "Node",
     "jsx": "react-jsx",
     "esModuleInterop": true,
@@ -13,6 +11,10 @@
     "noEmit": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
+    "types": ["jest", "node"],
+    "module": "commonjs",
+    "target": "es6",
+    "types": ["jest", "node", "@testing-library/jest-dom"],
     "useDefineForClassFields": true
   },
   "include": ["src"],

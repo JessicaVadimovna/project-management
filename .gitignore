@@ -29,3 +29,9 @@ database.db
 
 # Vite build output
 /dist
+
+.eslintrc.json 
+.prettierrc 
+package-lock.json 
+tsconfig.node.json 
+vite.config.js
